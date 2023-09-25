@@ -6,7 +6,12 @@ package xplane12_data_parser;
  * For every mistake in latitude, height, or speed, the deduction will either be 1/4, 1/2, or 1 point off
  */
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
+import com.opencsv.CSVWriter;
+
 
 public class scoreCalculations {
 
@@ -207,19 +212,38 @@ public class scoreCalculations {
 	 * returns the total penalty for the approach and landing
 	 * @param double[] horiDef all of the localizer position of the aircraft
 	 * @param double[]speed The speed of the aircraft during the ILS approach
+	 * @param String name The name of participant
 	 * @return double Returns the total penalty
 	 */
-	public void scoreCalc(String outputFolderPath, String name)throws IOException
-	{
+	public void scoreCalc(String outputFolderPath, String name) {
+		String outputFile = outputFolderPath + "/" + name + "_score.csv";
 		double[]horiDefILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "copN1,h-def");
 		double[]speedILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "_Vind,_kias");
 		double[]vertDefILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "copN1,v-def");
-		double[]altRoundOut = parser.getData(outputFolderPath + "/" + name + "_RoundOut_Data.csv", "p-alt,ftMSL");
-		double[]altLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "p-alt,ftMSL");
-		double[]horiDefLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "copN1,h-def");
+		// double[]altRoundOut = parser.getData(outputFolderPath + "/" + name + "_RoundOut_Data.csv", "p-alt,ftMSL");
+		// double[]altLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "p-alt,ftMSL");
+		// double[]horiDefLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "copN1,h-def");
 
-		totalScore -= scoreILSCalc(horiDefILS,speedILS, vertDefILS); //+ scoreRoundOut(altRoundOut) + scoreLanding(altLanding,horiDefLanding);
-		percentageScore = (totalScore / highestScorePossible) * 100;
+		//	totalScore -= scoreILSCalc(horiDefILS,speedILS, vertDefILS) + scoreRoundOut(altRoundOut) + scoreLanding(altLanding,horiDefLanding);
+		setTotalScore(getTotalScore() - scoreILSCalc(horiDefILS,speedILS, vertDefILS));
+		setPercentageScore((totalScore / highestScorePossible) * 100);
+
+		try (
+			FileWriter outputFileWriter = new FileWriter(new File (outputFile));
+			CSVWriter outputCSVWriter = new CSVWriter(outputFileWriter);
+		){
+			String[] headers = {"Total Score", "Highest Possible Score", "Percentage Score"};
+			String[] data = {String.valueOf(getTotalScore()), String.valueOf(getHighestScorePossible()), String.valueOf(getPercentageScore())};
+
+			outputCSVWriter.writeNext(headers);
+			outputCSVWriter.writeNext(data);
+		}
+		catch (FileNotFoundException e) {
+			System.out.println("Unable to open file '" + outputFile + "'");
+		}
+		catch(IOException e) {
+			System.out.println("Error writing to file '" + outputFile + "'");
+		}
 	}
 
 

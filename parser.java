@@ -40,13 +40,8 @@ public class parser {
 	 * @param outputFolderPath
 	 * @return String new csv file path
 	 */
-	public static String parseData(String filePath, String outputFolderPath, String name) throws IOException, CsvValidationException
-	{
+	public static String parseData(String filePath, String outputFolderPath, String name) {
 		String refactoredFilePath = outputFolderPath + "//" + name + "_Refactored_Data.csv";
-		FileWriter outputFileWriter = new FileWriter(new File (refactoredFilePath));
-		CSVWriter outputCSVWriter = new CSVWriter(outputFileWriter);
-		FileReader fileReader = new FileReader(filePath);
-		CSVReader csvReader = new CSVReader(fileReader);
 		List<String[]> selectedColumns = new ArrayList<>();
 		List<String> columnNames = Arrays.asList(
 				"_totl,_time",
@@ -68,8 +63,12 @@ public class parser {
 				"copN1,v-def"
 				);
 		int[] columnIndex = new int[columnNames.size()];
-		try 
-		{
+		try(
+			FileWriter outputFileWriter = new FileWriter(new File (refactoredFilePath));
+			CSVWriter outputCSVWriter = new CSVWriter(outputFileWriter);
+			FileReader fileReader = new FileReader(filePath);
+			CSVReader csvReader = new CSVReader(fileReader);
+		){
 			String[] headers = csvReader.readNext();
 			for (int i = 0; i < columnNames.size(); i++) 
 			{
@@ -96,13 +95,11 @@ public class parser {
 		{
 			System.out.println(e);
 		}
-		finally
-		{
-			outputCSVWriter.close();
-			csvReader.close();
+		catch (CsvValidationException e) {
+			System.out.println(e);
 		}
+
 		return refactoredFilePath;
-		
 	}
 
 	/**
@@ -154,23 +151,22 @@ public class parser {
 	 * @param outputFolderPath
 	 * @param String name The name of participant
 	 */
-	public static void parseOutSections(String filePath, String outputFolderPath, String name) throws IOException
-	{
+	public static void parseOutSections(String filePath, String outputFolderPath, String name) {
 		String ILSOutputFilePath = outputFolderPath + "//" + name + "_ILS_Data.csv";
 		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_RoundOut_Data.csv";
 		String landingOutputFilePath = outputFolderPath + "//" + name + "_Landing_Data.csv";
 
-		FileWriter outputILSFileWriter = new FileWriter(new File (ILSOutputFilePath));
-		FileWriter outputroundOutFileWriter = new FileWriter(new File (roundOutOutputFilePath));
-		FileWriter outputLandingFileWriter = new FileWriter(new File (landingOutputFilePath));
-		CSVWriter outputLandingCSVWriter = new CSVWriter(outputLandingFileWriter);
-		CSVWriter outputRoundOutCSVWriter = new CSVWriter(outputroundOutFileWriter);
-		CSVWriter outputILSCSVWriter = new CSVWriter(outputILSFileWriter);
+		try (
+			FileWriter outputILSFileWriter = new FileWriter(new File (ILSOutputFilePath));
+			FileWriter outputroundOutFileWriter = new FileWriter(new File (roundOutOutputFilePath));
+			FileWriter outputLandingFileWriter = new FileWriter(new File (landingOutputFilePath));
+			CSVWriter outputLandingCSVWriter = new CSVWriter(outputLandingFileWriter);
+			CSVWriter outputRoundOutCSVWriter = new CSVWriter(outputroundOutFileWriter);
+			CSVWriter outputILSCSVWriter = new CSVWriter(outputILSFileWriter);
 		
-		FileReader fileReader = new FileReader(filePath);
-		CSVReader csvReader = new CSVReader(fileReader);
-		try 
-		{
+			FileReader fileReader = new FileReader(filePath);
+			CSVReader csvReader = new CSVReader(fileReader);
+		){
 			int headerIndex = -1;
 
 				String[] headers = csvReader.readNext();
@@ -210,13 +206,6 @@ public class parser {
 			e.printStackTrace();
 			System.out.println(e);
 		}
-		finally
-		{
-			outputILSCSVWriter.close();
-			outputRoundOutCSVWriter.close();
-			outputLandingCSVWriter.close();
-			csvReader.close();
-		}
 
 	}
 	
@@ -226,14 +215,14 @@ public class parser {
 	 * @param dataHeader
 	 * @return double[] an array of the data selected
 	 */
-	public static double[]getData(String filePath, String dataHeader) throws IOException
-	{
+	public static double[]getData(String filePath, String dataHeader) {
 		double[]data = new double[numOfData];
-		FileReader fileReader = new FileReader(filePath);
-		CSVReader csvReader = new CSVReader(fileReader);
+		
 		int headerIndex = -1;
-		try 
-		{
+		try (
+			FileReader fileReader = new FileReader(filePath);
+			CSVReader csvReader = new CSVReader(fileReader);
+		){
 			String[] headers = csvReader.readNext();
 			for (int i = 0; i < headers.length; i++) 
 			{
@@ -253,10 +242,6 @@ public class parser {
 		catch(Exception e)
 		{
 			System.out.println(e);
-		}
-		finally
-		{
-			csvReader.close();
 		}
 		return data;
 	}
