@@ -8,7 +8,7 @@ package xplane12_data_parser;
 
 import java.io.IOException;
 
-public class scoreCalcuations {
+public class scoreCalculations {
 
 	private int highestScorePossible = 0;
 	private double totalScore = 0; // Double because we will subtract decimals from it
@@ -21,13 +21,13 @@ public class scoreCalcuations {
 	/**
 	 * initializes all the required data
 	 */
-	public scoreCalcuations()
+	public scoreCalculations()
 	{
 		// Highest score and totalScore start out at the highest possible score, and then totalScore 
 		// decreases with each penalty
-		highestScorePossible = parser.getNumOfILSData()*MAX_PTS_PER_DATA_POINT_ILS
-				+ parser.getNumOfRoundoutData() * MAX_PTS_PER_DATA_POINT_LANDING
-				+ parser.getNumOfLandingData() * MAX_PTS_PER_DATA_POINT_LANDING;
+		highestScorePossible = parser.getNumOfILSData()*MAX_PTS_PER_DATA_POINT_ILS;
+				//+ parser.getNumOfRoundoutData() * MAX_PTS_PER_DATA_POINT_LANDING
+				//+ parser.getNumOfLandingData() * MAX_PTS_PER_DATA_POINT_LANDING;
 		totalScore = highestScorePossible;
 	}
 
@@ -209,16 +209,16 @@ public class scoreCalcuations {
 	 * @param double[]speed The speed of the aircraft during the ILS approach
 	 * @return double Returns the total penalty
 	 */
-	public void scoreCalc(String outputFolderPath)throws IOException
+	public void scoreCalc(String outputFolderPath, String name)throws IOException
 	{
-		double[]horiDefILS = parser.getData(outputFolderPath + "\\ILS_Data.csv", "copN1,h-def");
-		double[]speedILS = parser.getData(outputFolderPath + "\\ILS_Data.csv", "_Vind,_kias");
-		double[]vertDefILS = parser.getData(outputFolderPath + "\\ILS_Data.csv", "copN1,v-def");
-		double[]altRoundOut = parser.getData(outputFolderPath + "\\RoundOut_Data.csv", "p-alt,ftMSL");
-		double[]altLanding = parser.getData(outputFolderPath + "\\Landing_Data.csv", "p-alt,ftMSL");
-		double[]horiDefLanding = parser.getData(outputFolderPath + "\\Landing_Data.csv", "copN1,h-def");
+		double[]horiDefILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "copN1,h-def");
+		double[]speedILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "_Vind,_kias");
+		double[]vertDefILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "copN1,v-def");
+		double[]altRoundOut = parser.getData(outputFolderPath + "/" + name + "_RoundOut_Data.csv", "p-alt,ftMSL");
+		double[]altLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "p-alt,ftMSL");
+		double[]horiDefLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "copN1,h-def");
 
-		totalScore -= scoreILSCalc(horiDefILS,speedILS, vertDefILS) + scoreRoundOut(altRoundOut) + scoreLanding(altLanding,horiDefLanding);
+		totalScore -= scoreILSCalc(horiDefILS,speedILS, vertDefILS); //+ scoreRoundOut(altRoundOut) + scoreLanding(altLanding,horiDefLanding);
 		percentageScore = (totalScore / highestScorePossible) * 100;
 	}
 

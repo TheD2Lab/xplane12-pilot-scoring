@@ -1,6 +1,10 @@
 package xplane12_data_parser;
 
+import java.io.File;
 import java.io.IOException;
+
+import org.apache.commons.compress.utils.FileNameUtils;
+
 import com.opencsv.exceptions.CsvValidationException;
 
 public class Main {
@@ -12,26 +16,31 @@ public class Main {
 	public static void main(String[] args) throws CsvValidationException, IOException 
 	{
 		// Create Strings for input file and output file directories
-		String txtFilePath = "C:\\Users\\kayla\\OneDrive\\Desktop\\Fall 2022\\Direct Studies\\gazepoint-data-analysis\\data\\Data.txt";
-		String outputFolderPath = "C:\\Users\\kayla\\OneDrive\\Desktop\\Fall 2022\\Direct Studies\\gazepoint-data-analysis\\data\\results";
-		
+		String txtFilePath = "/Users/ashleyjones/Documents/CSULB/EyeTracking/Data/X-plane/NicolasTest_1.txt";
+		String outputFolderPath = "/Users/ashleyjones/Documents/CSULB/EyeTracking/Data/X-plane/results";
+
+		// Get name to append to directory and files
+		String name = FileNameUtils.getBaseName(txtFilePath);
+		String namedOutputFolder = outputFolderPath + "/" + name + "_scoring";
+		new File(namedOutputFolder).mkdirs();
+
+
 		// Parse the CSV files for the data points
-		String originalCSVFilePath = parser.txtToCSV(txtFilePath, outputFolderPath);
-		String refactoredCSVFilePath = parser.parseData(originalCSVFilePath, outputFolderPath);
+		String originalCSVFilePath = parser.txtToCSV(txtFilePath, namedOutputFolder, name);
+		String refactoredCSVFilePath = parser.parseData(originalCSVFilePath, namedOutputFolder, name);
 
 		//initializes the start and stop time for the ILS, Roundout, and landing phases
 		parser.initializeNumbers();
-		parser.parseOutSections(refactoredCSVFilePath, outputFolderPath);
+		parser.parseOutSections(refactoredCSVFilePath, namedOutputFolder, name);
 		
 		// Calculate the score for the approach to landing
-		scoreCalcuations score = new scoreCalcuations();
-		score.scoreCalc(outputFolderPath);
+		scoreCalculations score = new scoreCalculations();
+		score.scoreCalc(namedOutputFolder, name);
 		
 		// Print out values
 		//System.out.println("Data Points = " + score.getDataPoints() + " * 3 = Highest Possible Points = " + score.getHighestScore() + "\n");
 		System.out.println(score.getTotalScore() + " / " + score.getHighestScorePossible() + ":");
 		System.out.println(" %" + score.getPercentageScore());
-		
 	}
 	
 }

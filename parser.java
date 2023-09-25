@@ -40,9 +40,9 @@ public class parser {
 	 * @param outputFolderPath
 	 * @return String new csv file path
 	 */
-	public static String parseData(String filePath, String outputFolderPath) throws IOException, CsvValidationException
+	public static String parseData(String filePath, String outputFolderPath, String name) throws IOException, CsvValidationException
 	{
-		String refactoredFilePath = outputFolderPath + "\\Refactored_Data.csv";
+		String refactoredFilePath = outputFolderPath + "//" + name + "_Refactored_Data.csv";
 		FileWriter outputFileWriter = new FileWriter(new File (refactoredFilePath));
 		CSVWriter outputCSVWriter = new CSVWriter(outputFileWriter);
 		FileReader fileReader = new FileReader(filePath);
@@ -53,8 +53,8 @@ public class parser {
 				"_Vind,_kias",
 				"Vtrue,_ktas",
 				"Vtrue,_ktgs",
-				"hpath,_true",
-				"vpath,__deg",
+				//"hpath,_true",
+				//"vpath,__deg",
 				"pitch,__deg",
 				"_roll,__deg",
 				"p-alt,ftMSL",
@@ -109,11 +109,13 @@ public class parser {
 	 * changes a txt file into a csv file
 	 * @param filePath
 	 * @param outputFolderPath
+	 * @param String name The name of participant
 	 * @return String the csv file path
 	 */
-	public static String txtToCSV(String filePath, String outputFolderPath)
+	public static String txtToCSV(String filePath, String outputFolderPath, String name)
 	{
-		String csvFilePath = outputFolderPath + "\\Reformatted_Data.csv";
+		String csvFilePath = outputFolderPath + "//" + name + "_Reformatted_Data.csv";
+
 		try 
 		{
 			FileReader fileReader = new FileReader(filePath);
@@ -150,12 +152,13 @@ public class parser {
 	 * parses out the phases of the flight into different csv files
 	 * @param filePath
 	 * @param outputFolderPath
+	 * @param String name The name of participant
 	 */
-	public static void parseOutSections(String filePath, String outputFolderPath) throws IOException
+	public static void parseOutSections(String filePath, String outputFolderPath, String name) throws IOException
 	{
-		String ILSOutputFilePath = outputFolderPath + "\\ILS_Data.csv";
-		String roundOutOutputFilePath = outputFolderPath + "\\RoundOut_Data.csv";
-		String landingOutputFilePath = outputFolderPath + "\\Landing_Data.csv";
+		String ILSOutputFilePath = outputFolderPath + "//" + name + "_ILS_Data.csv";
+		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_RoundOut_Data.csv";
+		String landingOutputFilePath = outputFolderPath + "//" + name + "_Landing_Data.csv";
 
 		FileWriter outputILSFileWriter = new FileWriter(new File (ILSOutputFilePath));
 		FileWriter outputroundOutFileWriter = new FileWriter(new File (roundOutOutputFilePath));
