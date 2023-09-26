@@ -10,6 +10,12 @@ public class Main {
 	//Changes in Aircraft: All aircraft has different approach speed, the speeds for the method named SpeedILSCalcPenalty will need to be changed
 	//Changes in the weight of scoring each section: Currently every single method of scoring is weighted the same. If you would like to change this
 	//you would only need to change the  MAX_PTS_PER_DATA_POINT_ILS, MAX_PTS_PER_DATA_POINT_ROUNDOUT,  MAX_PTS_PER_DATA_POINT_LANDING
+
+	/**
+	 * entry point of scoring calculation program
+	 * @param args[0] txt file path
+	 * @param args[1] output directory path
+	 */
 	public static void main(String[] args) {
 		
 		String txtFilePath;

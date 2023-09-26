@@ -36,8 +36,9 @@ public class parser {
 	
 	/**
 	 * parses out only the useful/needed data into a different csv file
-	 * @param filePath
-	 * @param outputFolderPath
+	 * @param filePath file to be parsed
+	 * @param outputFolderPath directory to save output files
+	 * @param name name of the participant
 	 * @return String new csv file path
 	 */
 	public static String parseData(String filePath, String outputFolderPath, String name) {
@@ -104,9 +105,9 @@ public class parser {
 
 	/**
 	 * changes a txt file into a csv file
-	 * @param filePath
-	 * @param outputFolderPath
-	 * @param String name The name of participant
+	 * @param filePath txt file to be converted
+	 * @param outputFolderPath directory to save csv file
+	 * @param name name of participant
 	 * @return String the csv file path
 	 */
 	public static String txtToCSV(String filePath, String outputFolderPath, String name)
@@ -147,9 +148,9 @@ public class parser {
 
 	/**
 	 * parses out the phases of the flight into different csv files
-	 * @param filePath
-	 * @param outputFolderPath
-	 * @param String name The name of participant
+	 * @param filePath csv file to be parsed
+	 * @param outputFolderPath directory to save output files
+	 * @param name name of the participant
 	 */
 	public static void parseOutSections(String filePath, String outputFolderPath, String name) {
 		String ILSOutputFilePath = outputFolderPath + "//" + name + "_ILS_Data.csv";

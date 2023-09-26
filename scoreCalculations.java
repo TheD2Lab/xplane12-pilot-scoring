@@ -39,7 +39,7 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total score penalty for the localizer portion of the ILS approach
-	 * @param double[] horizontalDef is all of the localizer position of the aircraft
+	 * @param horizontalDef is all of the localizer position of the aircraft
 	 * @return double Returns the total penalty
 	 */
 	//For the lateral/vertical of the plane
@@ -76,12 +76,12 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total score penalty for the glideslope portion of the ILS approach
-	 * @param double[] verticalDef is all of the vertical position of the aircraft
+	 * @param verticalDef is all of the vertical position of the aircraft
 	 * @return double Returns the total penalty
 	 */
 	//For the lateral/vertical of the plane
 	//Check if its within +/- 2 degrees of the designated line
-	private double glideSlopeScorePenalty(double[]verticalDef)
+	private double glideSlopeScorePenalty(double[] verticalDef)
 	{
 		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
@@ -113,7 +113,7 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total speed penalty for the speed portion of the ILS approach
-	 * @param double[]speed The speed of the aircraft during the ILS approach
+	 * @param speed The speed of the aircraft during the ILS approach
 	 * @return double Returns the total penalty
 	 */
 	private double speedILSCalcPenalty(double[] speeds)
@@ -144,12 +144,12 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total penalty for the ILS approach. Based on the localizer, glideslope, and speed
-	 * @param double[] horiDef all of the localizer position of the aircraft
-	 * @param double[] speed The speed of the aircraft during the ILS approach
-	 * @param double[] vertDef all of the glideslope position of the aircraft
+	 * @param horiDef all of the localizer position of the aircraft
+	 * @param speed The speed of the aircraft during the ILS approach
+	 * @param vertDef all of the glideslope position of the aircraft
 	 * @return double Returns the total penalty
 	 */
-	public double scoreILSCalc(double[]horiDef, double[]speed, double[]vertDef)
+	public double scoreILSCalc(double[] horiDef, double[] speed, double[] vertDef)
 	{	
 		double penalty = localizerScorePenalty(horiDef) + glideSlopeScorePenalty(vertDef) + speedILSCalcPenalty(speed);
 		return penalty;
@@ -157,7 +157,7 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total penalty for the roundout phase. Based on altitude. Looking to see that the plane is continuously descending
-	 * @param double[]altitude contains all the altitude information for the aircraft
+	 * @param altitude contains all the altitude information for the aircraft
 	 * @return double Returns the total Penalty
 	 */
 	public double scoreRoundOut(double[]altitude)
@@ -182,10 +182,10 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total penalty for the landing Phase. Based on centerline and altitude
-	 * @param double[]altitude contains all the altitude information for the aircraft
+	 * @param altitude contains all the altitude information for the aircraft
 	 * @return double Returns the total Penalty
 	 */
-	public double scoreLanding(double[]altitude, double[]horizontalDef)
+	public double scoreLanding(double[] altitude, double[] horizontalDef)
 	{
 		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_LANDING/2;
 		double penalty = 0; 
@@ -210,10 +210,8 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total penalty for the approach and landing
-	 * @param double[] horiDef all of the localizer position of the aircraft
-	 * @param double[]speed The speed of the aircraft during the ILS approach
-	 * @param String name The name of participant
-	 * @return double Returns the total penalty
+	 * @param outputFolderPath directory to save output files
+	 * @param name name of participant
 	 */
 	public void scoreCalc(String outputFolderPath, String name) {
 		String outputFile = outputFolderPath + "/" + name + "_score.csv";
