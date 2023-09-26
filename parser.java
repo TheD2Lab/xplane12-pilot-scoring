@@ -138,8 +138,8 @@ public class parser {
 		} 
 		catch (IOException e) 
 		{
+			System.out.println("\nUnable to convert txt file to csv file.");
 			e.printStackTrace();
-			System.out.println(e);
 		}
 		return csvFilePath;
 	}
@@ -241,6 +241,7 @@ public class parser {
 		}
 		catch(Exception e)
 		{
+			System.out.println("\nUnable to get data from csv file.");
 			System.out.println(e);
 		}
 		return data;

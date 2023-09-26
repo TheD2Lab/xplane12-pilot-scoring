@@ -11,9 +11,29 @@ public class Main {
 	//Changes in the weight of scoring each section: Currently every single method of scoring is weighted the same. If you would like to change this
 	//you would only need to change the  MAX_PTS_PER_DATA_POINT_ILS, MAX_PTS_PER_DATA_POINT_ROUNDOUT,  MAX_PTS_PER_DATA_POINT_LANDING
 	public static void main(String[] args) {
-		// Create Strings for input file and output file directories
-		String txtFilePath = "/Users/ashleyjones/Documents/CSULB/EyeTracking/Data/X-plane/NicolasTest_1.txt";
-		String outputFolderPath = "/Users/ashleyjones/Documents/CSULB/EyeTracking/Data/X-plane/results";
+		
+		String txtFilePath;
+		String outputFolderPath;
+
+		// Initialize paths
+		if (args.length == 2) {
+			txtFilePath = args[0];
+			outputFolderPath = args[1];
+		}
+		else {
+			System.out.println("Text file and output directory not specified.");
+			return;
+		}
+
+		// Check that input file and directory exist
+		if (!new File(txtFilePath).exists()) {
+			System.out.println("Input text file does not exist.");
+			return;
+		}
+		else if (!new File(outputFolderPath).isDirectory()) {
+			System.out.println("Output directory path does not exits.");
+			return;
+		}
 
 		// Get name to append to directory and files
 		String name = FileNameUtils.getBaseName(txtFilePath);
