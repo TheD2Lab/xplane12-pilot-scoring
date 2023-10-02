@@ -32,12 +32,10 @@ public class parser {
 		String refactoredFilePath = outputFolderPath + "//" + name + "_Refactored_Data.csv";
 		List<String[]> selectedColumns = new ArrayList<>();
 		List<String> columnNames = Arrays.asList(
-				"_totl,_time",
+			"missn,_time",
 				"_Vind,_kias",
 				"Vtrue,_ktas",
 				"Vtrue,_ktgs",
-				//"hpath,_true",
-				//"vpath,__deg",
 				"pitch,__deg",
 				"_roll,__deg",
 				"p-alt,ftMSL",
@@ -154,6 +152,11 @@ public class parser {
 		List<Double> altRoundout = new LinkedList<>();
 		List<Double> altLanding = new LinkedList<>();
 		List<Double> hDefLanding = new LinkedList<>();
+		String timeApproachStr = "";
+		String timeTotalStr = "";
+		double timeApproach = 0;
+		double timeLanding = 0;
+		double timeTotal = 0;
 
 		// save file paths to score object
 		int numStepdown = 0;
@@ -166,6 +169,7 @@ public class parser {
 		int hdefIndex = -1;
 		int vdefIndex = -1;
 		int speedIndex = -1;
+		int timeIndex = -1;
 
 		// Note: try-with-resources automatically closes files
 		try (
@@ -183,16 +187,26 @@ public class parser {
 
 			String[] headers = csvReader.readNext();
 			for (int i = 0; i < headers.length; i++) {
-				if(headers[i].equals("p-alt,ftMSL")) {
-					altitudeIndex = i;
-				} else if(headers[i].equals("copN1,dme-d")) {
-					dmeIndex = i;
-				} else if(headers[i].equals("copN1,h-def")) {
-					hdefIndex = i;
-				} else if(headers[i].equals("_Vind,_kias")) {
-					speedIndex = i;
-				} else if (headers[i].equals("copN1,v-def")) {
-					vdefIndex = i;
+
+				switch (headers[i]) {
+					case "p-alt,ftMSL":
+						altitudeIndex = i;
+						break;
+					case"copN1,dme-d":
+						dmeIndex = i;
+						break;
+					case "copN1,h-def":
+						hdefIndex = i;
+						break;
+					case "_Vind,_kias":
+						speedIndex = i;
+						break;
+					case "copN1,v-def":
+						vdefIndex = i;
+						break;
+					case "missn,_time":
+						timeIndex = i;
+						break;
 				}
 			}
 			outputStepdownCSVWriter.writeNext(headers);
@@ -217,6 +231,7 @@ public class parser {
 					vDefFinalApproach.add(Double.valueOf(row[vdefIndex]));
 					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
 					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
+					timeApproachStr = row[timeIndex];
 
 				} else if(Double.valueOf(row[altitudeIndex])>fieldElevation){
 					outputRoundOutCSVWriter.writeNext(row);
@@ -227,8 +242,8 @@ public class parser {
 					numLanding++;
 					altLanding.add(Double.valueOf(row[altitudeIndex]));
 					hDefLanding.add(Double.valueOf(row[hdefIndex]));
-
 				}
+				timeTotalStr = row[timeIndex];
 			}
 		}
 		catch(Exception e)
@@ -237,6 +252,11 @@ public class parser {
 			System.out.println(e);
 		}
 
+		timeApproach = Double.valueOf(timeApproachStr);
+		timeTotal = Double.valueOf(timeTotalStr);
+		timeLanding = timeTotal - timeApproach;
+
+		// construct flight data object to pass to scorer
 		data = new FlightData(
 			altStepdown,
 			dmeStepdown,
@@ -247,7 +267,10 @@ public class parser {
 			hDefFinalApproach,
 			altRoundout,
 			altLanding,
-			hDefLanding
+			hDefLanding,
+			timeApproach,
+			timeLanding,
+			timeTotal
 		);
 
 		// Instantiate new score object
@@ -263,7 +286,7 @@ public class parser {
 			numRoundout,
 			numLanding,
 			data
-			);
+		);
 		
 		return score;
 		

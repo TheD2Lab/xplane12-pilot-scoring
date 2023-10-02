@@ -304,14 +304,20 @@ public class scoreCalculations {
 	public void writeToFile(String outputLocation) {
 		String outputFile = outputLocation + "/" + this.participant + "_score.csv";
 		String[] headers = {
+			"Approach Time",
 			"Approach Score",
+			"Landing Time",
 			"Landing Score",
+			"Total Time",
 			"Overall Score"
 		};
 
 		String[] data = {
+			String.valueOf(this.data.getTimeApproach()),
 			String.valueOf(getPercentageScore(scoreType.APPROACH)),
+			String.valueOf(this.data.getTimeLanding()),
 			String.valueOf(getPercentageScore(scoreType.LANDING)),
+			String.valueOf(this.data.getTimeTotal()),
 			String.valueOf(getPercentageScore(scoreType.OVERALL))
 		};
 

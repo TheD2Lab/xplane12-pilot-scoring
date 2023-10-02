@@ -14,6 +14,9 @@ public class FlightData {
    private List<Double> altRoundout;
    private List<Double> altLanding;
    private List<Double> hDefLanding;
+   private double timeApproach = 0;
+   private double timeLanding = 0;
+   private double timeTotal = 0;
 
    FlightData() {
       this.altStepdown = new LinkedList<>();
@@ -31,7 +34,8 @@ public class FlightData {
    
    public FlightData(List<Double> altStepdown, List<Double> dmeStepdown, List<Double> speedStepdown,
          List<Double> hDefStepdown, List<Double> vDefFinalApproach, List<Double> speedFinalApproach,
-         List<Double> hDefFinalApproach, List<Double> altRoundout, List<Double> altLanding, List<Double> hDefLanding) {
+         List<Double> hDefFinalApproach, List<Double> altRoundout, List<Double> altLanding, List<Double> hDefLanding,
+         double timeApproach, double timeLanding, double timeTotal) {
       this.altStepdown = altStepdown;
       this.dmeStepdown = dmeStepdown;
       this.speedStepdown = speedStepdown;
@@ -42,6 +46,9 @@ public class FlightData {
       this.altRoundout = altRoundout;
       this.altLanding = altLanding;
       this.hDefLanding = hDefLanding;
+      this.timeApproach = timeApproach;
+      this.timeLanding = timeLanding;
+      this.timeTotal = timeTotal;
    }
 
 
@@ -106,6 +113,76 @@ public class FlightData {
    }
    public void setHDefLanding(List<Double> hDefLanding) {
       this.hDefLanding = hDefLanding;
+   }
+
+
+   public List<Double> gethDefStepdown() {
+      return hDefStepdown;
+   }
+
+
+   public void sethDefStepdown(List<Double> hDefStepdown) {
+      this.hDefStepdown = hDefStepdown;
+   }
+
+
+   public List<Double> getvDefFinalApproach() {
+      return vDefFinalApproach;
+   }
+
+
+   public void setvDefFinalApproach(List<Double> vDefFinalApproach) {
+      this.vDefFinalApproach = vDefFinalApproach;
+   }
+
+
+   public List<Double> gethDefFinalApproach() {
+      return hDefFinalApproach;
+   }
+
+
+   public void sethDefFinalApproach(List<Double> hDefFinalApproach) {
+      this.hDefFinalApproach = hDefFinalApproach;
+   }
+
+
+   public List<Double> gethDefLanding() {
+      return hDefLanding;
+   }
+
+
+   public void sethDefLanding(List<Double> hDefLanding) {
+      this.hDefLanding = hDefLanding;
+   }
+
+
+   public double getTimeApproach() {
+      return timeApproach;
+   }
+
+
+   public void setTimeApproach(double timeApproach) {
+      this.timeApproach = timeApproach;
+   }
+
+
+   public double getTimeLanding() {
+      return timeLanding;
+   }
+
+
+   public void setTimeLanding(double timeLanding) {
+      this.timeLanding = timeLanding;
+   }
+
+
+   public double getTimeTotal() {
+      return timeTotal;
+   }
+
+
+   public void setTimeTotal(double timeTotal) {
+      this.timeTotal = timeTotal;
    }
 
 }
