@@ -10,32 +10,105 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import com.opencsv.CSVWriter;
 
 
 public class scoreCalculations {
 
-	private int highestScorePossible = 0;
-	private double totalScore = 0; // Double because we will subtract decimals from it
-	private double percentageScore = 0; // Score out of 100%
+	private final static int MAX_PTS_PER_DATA_POINT_ILS = 3;
+	private final static int MAX_PTS_PER_DATA_POINT_ROUNDOUT = 1; 
+	private final static int MAX_PTS_PER_DATA_POINT_LANDING = 2;
 
-	private final int MAX_PTS_PER_DATA_POINT_ILS = 3;
-	private final int MAX_PTS_PER_DATA_POINT_ROUNDOUT = 1; 
-	private final int MAX_PTS_PER_DATA_POINT_LANDING = 2;
+	private String participant;
 
-	/**
-	 * initializes all the required data
-	 */
-	public scoreCalculations()
-	{
-		// Highest score and totalScore start out at the highest possible score, and then totalScore 
-		// decreases with each penalty
-		highestScorePossible = parser.getNumOfILSData()*MAX_PTS_PER_DATA_POINT_ILS;
-				//+ parser.getNumOfRoundoutData() * MAX_PTS_PER_DATA_POINT_LANDING
-				//+ parser.getNumOfLandingData() * MAX_PTS_PER_DATA_POINT_LANDING;
-		totalScore = highestScorePossible;
+	// [0] = actual score, [1] = highest possible score
+	private double[] approachScore = {0,1};
+	private double[] landingScore = {0,1};
+	private double[] overallScore = {0,1};
+
+	private int numOfData = 0;
+	private int numOfStepdownData = 0; 
+	private int numOfFinalApproachData = 0; 
+	private int numOfLandingData = 0; 
+	private int numOfRoundoutData = 0;
+
+	private String stepdownFile;
+	private String finalApproachFile;
+	private String roundoutFile;
+	private String landingFile;
+
+	private FlightData data;
+
+	private final static List<Fix> STEPDOWN_FIXES;
+	static {
+		List<Fix> tmp = new ArrayList<>();
+		tmp.add(new Fix(22.2, 7000));
+		tmp.add(new Fix(19.1, 6000));
+		tmp.add(new Fix(15.9, 5000));
+		tmp.add(new Fix(12.5, 4000));
+		tmp.add(new Fix(6.3, 2200));
+
+		STEPDOWN_FIXES = Collections.unmodifiableList(tmp);
 	}
 
+	private enum scoreType {
+		APPROACH,
+		LANDING,
+		OVERALL
+	}
+	
+	/**
+	 * 
+	 * @param name
+	 * @param sdFile
+	 * @param faFile
+	 * @param rFile
+	 * @param lFile
+	 * @param numData
+	 * @param numSD
+	 * @param numFA
+	 * @param numR
+	 * @param numL
+	 */
+	public scoreCalculations(String name, String sdFile, String faFile, String rFile, String lFile,
+		int numData, int numSD, int numFA, int numR, int numL, FlightData data) {
+
+		this.participant = name;
+		this.stepdownFile = sdFile;
+		this.finalApproachFile = faFile;
+		this.roundoutFile = rFile;
+		this.landingFile = lFile;
+		this.numOfData = numData;
+		this.numOfStepdownData = numSD;
+		this.numOfFinalApproachData = numFA;
+		this.numOfRoundoutData = numR;
+		this.numOfLandingData = numL;
+		this.data = data;
+		setMaxPoints();
+		scoreCalc();
+	}
+
+	/**
+	 * Calculates the max points for the overall score and sub-scores.
+	 */
+	private void setMaxPoints() {
+		// set approach score to max possible points
+		this.approachScore[1] = (this.numOfStepdownData + this.numOfFinalApproachData)*MAX_PTS_PER_DATA_POINT_ILS;
+		this.approachScore[0] = this.approachScore[1];
+
+		// set roundout score to max possible points
+		this.landingScore[1] = this.numOfRoundoutData * MAX_PTS_PER_DATA_POINT_ROUNDOUT
+			+ this.numOfLandingData * MAX_PTS_PER_DATA_POINT_LANDING;
+		this.landingScore[0] = this.landingScore[1];
+
+		// set max score to max possible points
+		this.overallScore[1] = this.approachScore[1] + this.landingScore[1];
+		this.overallScore[0] = this.overallScore[1];
+	}
 
 	/**
 	 * returns the total score penalty for the localizer portion of the ILS approach
@@ -44,30 +117,20 @@ public class scoreCalculations {
 	 */
 	//For the lateral/vertical of the plane
 	//Check if its within +/- 2 degrees of the designated line
-	private double localizerScorePenalty(double[]horizontalDef)
-	{
+	private double localizerScorePenalty(List<Double> horizontalDef) {
 		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
-		for(int i=0; i<horizontalDef.length; i++)
-		{
-			if(Math.abs(horizontalDef[i]) < 0.1)
-			{
+		for(double hdef : horizontalDef) {
+			double absValue = Math.abs(hdef);
+			if(absValue  < 0.1) {
 				continue;
-			}
-			else if(Math.abs(horizontalDef[i]) <= 0.5) // 0.5 degrees
-			{
+			} else if (absValue  <= 0.5) {	// 0.5 degrees 
 				penalty += 0.25 * maxPtPerMethod;
-			}
-			else if(Math.abs(horizontalDef[i]) <= 1) // 1 degree
-			{
+			} else if (absValue  <= 1) {	// 1 degree
 				penalty += 0.50 * maxPtPerMethod;
-			}
-			else if(Math.abs(horizontalDef[i]) <= 1.5) // 1.5 degrees
-			{
+			} else if (absValue  <= 1.5) {	// 1.5 degrees
 				penalty += 0.75 * maxPtPerMethod;
-			}
-			else if(Math.abs(horizontalDef[i]) > 1.5) // Above 1.5 degrees
-			{
+			} else if (absValue  > 1.5) {// Above 1.5 degrees
 				penalty += maxPtPerMethod;
 			}
 		}
@@ -81,31 +144,51 @@ public class scoreCalculations {
 	 */
 	//For the lateral/vertical of the plane
 	//Check if its within +/- 2 degrees of the designated line
-	private double glideSlopeScorePenalty(double[] verticalDef)
-	{
+	private double glideSlopeScorePenalty(List<Double> verticalDef) {
 		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
-		for(int i=0; i<verticalDef.length; i++)
-		{
-			if(Math.abs(verticalDef[i]) < 0.1)
-			{
+		for(double vdef : verticalDef) {
+			double absValue = Math.abs(vdef);
+
+			if (absValue < 0.1) {
 				continue;
-			}
-			else if(Math.abs(verticalDef[i]) <= 0.5) // 0.5 degrees
-			{
+			} else if (absValue <= 0.5) {	// 0.5 degrees
 				penalty += 0.25 * maxPtPerMethod;
-			}
-			else if(Math.abs(verticalDef[i]) <= 1) // 1 degree
-			{
+			} else if (absValue <= 1) {	// 1 degree
 				penalty += 0.50 * maxPtPerMethod;
 			}
-			else if(Math.abs(verticalDef[i]) <= 1.5) // 1.5 degrees
-			{
+			else if (absValue <= 1.5) {	// 1.5 degrees
 				penalty += 0.75 * maxPtPerMethod;
-			}
-			else if(Math.abs(verticalDef[i]) > 1.5)
-			{
+			} else if (absValue > 1.5) {
 				penalty += maxPtPerMethod; // Above 1.5 degrees 
+			}
+		}
+		return penalty;
+	}
+
+	/**
+	 * returns the total altitude penalty for the stepdown portion of the ILS approach
+	 * @param altitude the altitude of the aircraft during the ILS approach
+	 * @return
+	 */
+	private double altitudeILSCalcPenalty(List<Double> dmes, List<Double>altitudes) {
+		double penalty = 0;
+		int currentFix = 0;
+		Iterator<Double> dmeIter = dmes.iterator();
+		Iterator<Double> altIter = altitudes.iterator();
+		Double dme;
+		Double alt;
+
+		while(dmeIter.hasNext() && altIter.hasNext()) {
+			dme = dmeIter.next();
+			alt = altIter.next();
+			// check which fix plane is approaching
+			while (dme < STEPDOWN_FIXES.get(currentFix).dme) {
+				currentFix++;
+			}
+
+			if (alt < STEPDOWN_FIXES.get(currentFix).altitude) {
+				penalty++;
 			}
 		}
 		return penalty;
@@ -116,43 +199,36 @@ public class scoreCalculations {
 	 * @param speed The speed of the aircraft during the ILS approach
 	 * @return double Returns the total penalty
 	 */
-	private double speedILSCalcPenalty(double[] speeds)
-	{
+	private double speedILSCalcPenalty(List<Double> speeds) {
 		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
-		for(double speed: speeds)
-		{
-			if(89 < speed && speed < 91)
-			{
+		for(double speed : speeds) {
+			if (89 < speed && speed < 91) {
 				continue;
-			}
-			else if(80 < speed && speed < 100)
-			{
+			} else if (80 < speed && speed < 100) {
 				penalty += 0.25 * maxPtPerMethod;
-			}
-			else if(75 < speed && speed < 105)
-			{
+			} else if (75 < speed && speed < 105) {
 				penalty += 0.50 * maxPtPerMethod;
-			}
-			else
-			{
+			} else {
 				penalty += maxPtPerMethod;
 			}
 		}
 		return penalty;
 	}
 
+	public double scoreStepdownCalc(List<Double> horiDef, List<Double> speed, List<Double> altitude, List<Double> dme) {
+		return localizerScorePenalty(horiDef) + speedILSCalcPenalty(speed) + altitudeILSCalcPenalty(dme, altitude);
+	}
+
 	/**
-	 * returns the total penalty for the ILS approach. Based on the localizer, glideslope, and speed
+	 * returns the total penalty for the final approach. Based on the localizer, glideslope, and speed
 	 * @param horiDef all of the localizer position of the aircraft
 	 * @param speed The speed of the aircraft during the ILS approach
 	 * @param vertDef all of the glideslope position of the aircraft
 	 * @return double Returns the total penalty
 	 */
-	public double scoreILSCalc(double[] horiDef, double[] speed, double[] vertDef)
-	{	
-		double penalty = localizerScorePenalty(horiDef) + glideSlopeScorePenalty(vertDef) + speedILSCalcPenalty(speed);
-		return penalty;
+	public double scoreFinalApproachCalc(List<Double> horiDef, List<Double> speed, List<Double> vertDef) {	
+		return localizerScorePenalty(horiDef) + speedILSCalcPenalty(speed) + glideSlopeScorePenalty(vertDef);
 	}
 
 	/**
@@ -160,19 +236,15 @@ public class scoreCalculations {
 	 * @param altitude contains all the altitude information for the aircraft
 	 * @return double Returns the total Penalty
 	 */
-	public double scoreRoundOut(double[]altitude)
+	public double scoreRoundOut(List<Double> altitude)
 	{
 		double penalty =0;
-		double previousAlt = altitude[0];
-		for(int altIndex = 1; altIndex < altitude.length; altIndex++)
-		{
-			previousAlt = altitude[altIndex];
-			if(previousAlt >= altitude[altIndex])
-			{
+		double previousAlt = altitude.get(0);
+		for(int altIndex = 1; altIndex < altitude.size(); altIndex++) {
+			previousAlt = altitude.get(altIndex);
+			if(previousAlt >= altitude.get(altIndex)) {
 				continue;
-			}
-			else
-			{
+			} else {
 				penalty = MAX_PTS_PER_DATA_POINT_ROUNDOUT;
 			}
 
@@ -185,21 +257,16 @@ public class scoreCalculations {
 	 * @param altitude contains all the altitude information for the aircraft
 	 * @return double Returns the total Penalty
 	 */
-	public double scoreLanding(double[] altitude, double[] horizontalDef)
+	public double scoreLanding(List<Double> altitude, List<Double> horizontalDef)
 	{
 		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_LANDING/2;
 		double penalty = 0; 
 		penalty += localizerScorePenalty(horizontalDef);
-		for(double alt: altitude)
-		{
-			if(alt > parser.getFieldElevation())
-			{
-				if(alt - parser.getFieldElevation() > 5)
-				{
+		for(double alt: altitude) {
+			if(alt > parser.getFieldElevation()) {
+				if(alt - parser.getFieldElevation() > 5) {
 					penalty += 0.5 * maxPtPerMethod;
-				}
-				else
-				{
+				} else {
 					penalty += maxPtPerMethod;
 				}
 			}
@@ -213,26 +280,45 @@ public class scoreCalculations {
 	 * @param outputFolderPath directory to save output files
 	 * @param name name of participant
 	 */
-	public void scoreCalc(String outputFolderPath, String name) {
-		String outputFile = outputFolderPath + "/" + name + "_score.csv";
-		double[]horiDefILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "copN1,h-def");
-		double[]speedILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "_Vind,_kias");
-		double[]vertDefILS = parser.getData(outputFolderPath + "/" + name + "_ILS_Data.csv", "copN1,v-def");
-		// double[]altRoundOut = parser.getData(outputFolderPath + "/" + name + "_RoundOut_Data.csv", "p-alt,ftMSL");
-		// double[]altLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "p-alt,ftMSL");
-		// double[]horiDefLanding = parser.getData(outputFolderPath + "/" + name + "_Landing_Data.csv", "copN1,h-def");
+	public void scoreCalc() {
 
-		//	totalScore -= scoreILSCalc(horiDefILS,speedILS, vertDefILS) + scoreRoundOut(altRoundOut) + scoreLanding(altLanding,horiDefLanding);
-		setTotalScore(getTotalScore() - scoreILSCalc(horiDefILS,speedILS, vertDefILS));
-		setPercentageScore((totalScore / highestScorePossible) * 100);
+		this.approachScore[0] -= scoreStepdownCalc(
+			data.getHDefStepdown(), 
+			data.getSpeedStepdown(), 
+			data.getAltStepdown(), 
+			data.getDmeStepdown()
+		);
+
+		this.approachScore[0] -= scoreFinalApproachCalc(
+			data.getHDefFinalApproach(),
+			data.getSpeedFinalApproach(),
+			data.getVDefFinalApproach()
+		);
+
+		this.landingScore[0] -= scoreRoundOut(data.getAltLanding());
+		this.landingScore[0] -= scoreLanding(data.getAltLanding(), data.getHDefLanding());
+
+		this.overallScore[0] = this.landingScore[0] + this.approachScore[0];
+	}
+
+	public void writeToFile(String outputLocation) {
+		String outputFile = outputLocation + "/" + this.participant + "_score.csv";
+		String[] headers = {
+			"Approach Score",
+			"Landing Score",
+			"Overall Score"
+		};
+
+		String[] data = {
+			String.valueOf(getPercentageScore(scoreType.APPROACH)),
+			String.valueOf(getPercentageScore(scoreType.LANDING)),
+			String.valueOf(getPercentageScore(scoreType.OVERALL))
+		};
 
 		try (
 			FileWriter outputFileWriter = new FileWriter(new File (outputFile));
 			CSVWriter outputCSVWriter = new CSVWriter(outputFileWriter);
 		){
-			String[] headers = {"Total Score", "Highest Possible Score", "Percentage Score"};
-			String[] data = {String.valueOf(getTotalScore()), String.valueOf(getHighestScorePossible()), String.valueOf(getPercentageScore())};
-
 			outputCSVWriter.writeNext(headers);
 			outputCSVWriter.writeNext(data);
 		}
@@ -244,54 +330,109 @@ public class scoreCalculations {
 		}
 	}
 
-
-	/**
-	 * retrieves the highestScore possible
-	 * @return returns the score
-	 */
-	public int getHighestScorePossible() {
-		return highestScorePossible;
+	public double getPercentageScore(scoreType val) {
+		switch(val) {
+			case APPROACH:
+				return this.approachScore[0] / this.approachScore[1];
+			case LANDING:
+				return this.landingScore[0] / this.landingScore[1];
+			case OVERALL:
+				return this.overallScore[0] / this.overallScore[1];
+			default:
+				return -1;
+		}
 	}
 
-
-	/**
-	 * able to set the highest score possible
-	 * @param highestScorePossible
-	 */
-	public void setHighestScorePossible(int highestScorePossible) {
-		this.highestScorePossible = highestScorePossible;
-	}
-
-
-	/**
-	 * able to set the total score
-	 * @param totalScore
-	 */
-	public void setTotalScore(double totalScore) {
-		this.totalScore = totalScore;
+	public String getParticipant() {
+		return this.participant;
 	}
 
 	/**
-	 * able to set the percentage
-	 * @param percentageScore
+	 * @return the numOfData
 	 */
-	public void setPercentageScore(double percentageScore) {
-		this.percentageScore = percentageScore;
+	public int getNumOfData() {
+		return this.numOfData;
 	}
 
 	/**
-	 * retrieves the total score
-	 * @return the total score 
+	 * @param numOfData the numOfData to set
 	 */
-	public double getTotalScore() {
-		return totalScore;
+	public void setNumOfData(int numOfData) {
+		this.numOfData = numOfData;
 	}
+
+	public void setNumOfStepDownData(int numOfStepdownData) {
+		this.numOfStepdownData = numOfStepdownData;
+	}
+
+	public int getNumOfStepDownData() {
+		return this.numOfStepdownData;
+	}
+
 	/**
-	 * returns the percentage
-	 * @return the percent of the score
+	 * @return the numOfILSData
 	 */
-	public double getPercentageScore()
-	{
-		return percentageScore;
+	public int getNumOfFinalApproachData() {
+		return this.numOfFinalApproachData;
+	}
+
+	/**
+	 * @param numOfILSData the numOfILSData to set
+	 */
+	public void setNumOfFinalApproachData(int numOfILSData) {
+		this.numOfFinalApproachData = numOfILSData;
+	}
+
+	/**
+	 * @return the numOfLandingData
+	 */
+	public int getNumOfLandingData() {
+		return this.numOfLandingData;
+	}
+
+	/**
+	 * @param numOfLandingData the numOfLandingData to set
+	 */
+	public void setNumOfLandingData(int numOfLandingData) {
+		this.numOfLandingData = numOfLandingData;
+	}
+
+	/**
+	 * @return the numOfRoundoutData
+	 */
+	public int getNumOfRoundoutData() {
+		return this.numOfRoundoutData;
+	}
+
+	/**
+	 * @param numOfRoundoutData the numOfRoundoutData to set
+	 */
+	public void setNumOfRoundoutData(int numOfRoundoutData) {
+		this.numOfRoundoutData = numOfRoundoutData;
+	}
+
+	public void setStepdownFile(String filePath) {
+		this.stepdownFile = filePath;
+	}
+	public String getStepdownFile() {
+		return this.stepdownFile;
+	}
+	public void setFinalApproachFile(String filePath) {
+		this.finalApproachFile = filePath;
+	}
+	public String getFinalApproachFile(String filePath) {
+		return this.finalApproachFile;
+	}
+	public void setRoundoutFile(String filePath) {
+		this.roundoutFile = filePath;
+	}
+	public String getRoundoutFile() {
+		return this.roundoutFile;
+	}
+	public void setLandingFile(String filePath) {
+		this.landingFile = filePath;
+	}
+	public String getLandingFile() {
+		return this.landingFile;
 	}
 }

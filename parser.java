@@ -2,12 +2,12 @@ package xplane12_data_parser;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.opencsv.CSVReader;
@@ -16,23 +16,10 @@ import com.opencsv.exceptions.CsvValidationException;
 
 public class parser {
 
-	private static int numOfData = 0; 
-	private static int numOfILSData = 0; 
-	private static int numOfLandingData = 0; 
-	private static int numOfRoundoutData =0;
-	
-	private static int fieldElevation; 
-	private static int minimumsAltitude;
-	
-	/**
-	 * initializes the required numbers. Numbers are based on the airport 
-	 */
-	public static void initializeNumbers()
-	{
-		//for ILS 34R KSEA
-		fieldElevation = 1025;//432.3
-		minimumsAltitude = 1090;
-	}
+	// For ILS 34R KSEA. Change for different airport
+	private static int fieldElevation = 1025; 
+	private static int minimumsAltitude = 1090;
+	private static double intersectionDME = 6.3;
 	
 	/**
 	 * parses out only the useful/needed data into a different csv file
@@ -61,7 +48,8 @@ public class parser {
 				"__lon,__deg",
 				"___CG,ftMSL",
 				"copN1,h-def",
-				"copN1,v-def"
+				"copN1,v-def",
+				"copN1,dme-d"
 				);
 		int[] columnIndex = new int[columnNames.size()];
 		try(
@@ -71,8 +59,7 @@ public class parser {
 			CSVReader csvReader = new CSVReader(fileReader);
 		){
 			String[] headers = csvReader.readNext();
-			for (int i = 0; i < columnNames.size(); i++) 
-			{
+			for (int i = 0; i < columnNames.size(); i++) {
 				columnIndex[i] = Arrays.asList(headers).indexOf(columnNames.get(i));
 				if (columnIndex[i] == -1) 
 				{
@@ -80,8 +67,7 @@ public class parser {
 				}
 			}
 			String[] row;
-			while ((row = csvReader.readNext()) != null) 
-			{
+			while ((row = csvReader.readNext()) != null) {
 				String[] selectedRow = new String[columnIndex.length];
 				for (int i = 0; i < columnIndex.length; i++) 
 				{
@@ -92,8 +78,7 @@ public class parser {
 			outputCSVWriter.writeNext(columnNames.toArray(new String[0])); // write the header row
 			outputCSVWriter.writeAll(selectedColumns); // write the selected columns
 		} 
-		catch (IOException e) 
-		{
+		catch (IOException e) {
 			System.out.println(e);
 		}
 		catch (CsvValidationException e) {
@@ -131,7 +116,6 @@ public class parser {
 				    fields[i] = fields[i].replaceAll("\\s+", "");
 				}
 				outputCSVWriter.writeNext(fields);
-				numOfData++;
 			}
 			outputCSVWriter.close();
 			bufferedReader.close();
@@ -145,62 +129,107 @@ public class parser {
 		return csvFilePath;
 	}
 
-
 	/**
 	 * parses out the phases of the flight into different csv files
 	 * @param filePath csv file to be parsed
 	 * @param outputFolderPath directory to save output files
 	 * @param name name of the participant
 	 */
-	public static void parseOutSections(String filePath, String outputFolderPath, String name) {
-		String ILSOutputFilePath = outputFolderPath + "//" + name + "_ILS_Data.csv";
+	public static scoreCalculations parseOutSections(String filePath, String outputFolderPath, String name) {
+
+		scoreCalculations score;
+		String stepdownOutputFilePath = outputFolderPath + "//" + name + "_Stepdown_Data.csv";
+		String finalApproachOutputFilePath = outputFolderPath + "//" + name + "_FinalApproach_Data.csv";
 		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_RoundOut_Data.csv";
 		String landingOutputFilePath = outputFolderPath + "//" + name + "_Landing_Data.csv";
 
+		FlightData data;
+		List<Double> altStepdown = new LinkedList<>();
+		List<Double> dmeStepdown = new LinkedList<>();
+		List<Double> speedStepdown = new LinkedList<>();
+		List<Double> hDefStepdown = new LinkedList<>();
+		List<Double> vDefFinalApproach = new LinkedList<>();
+		List<Double> speedFinalApproach = new LinkedList<>();
+		List<Double> hDefFinalApproach = new LinkedList<>();
+		List<Double> altRoundout = new LinkedList<>();
+		List<Double> altLanding = new LinkedList<>();
+		List<Double> hDefLanding = new LinkedList<>();
+
+		// save file paths to score object
+		int numStepdown = 0;
+		int numFinalApproach = 0;
+		int numRoundout = 0;
+		int numLanding = 0;
+
+		int altitudeIndex = -1;
+		int dmeIndex = -1;
+		int hdefIndex = -1;
+		int vdefIndex = -1;
+		int speedIndex = -1;
+
+		// Note: try-with-resources automatically closes files
 		try (
-			FileWriter outputILSFileWriter = new FileWriter(new File (ILSOutputFilePath));
-			FileWriter outputroundOutFileWriter = new FileWriter(new File (roundOutOutputFilePath));
-			FileWriter outputLandingFileWriter = new FileWriter(new File (landingOutputFilePath));
+			FileWriter outputStepdownFileWriter = new FileWriter(new File(stepdownOutputFilePath));
+			FileWriter outputFinalApproachFileWriter = new FileWriter(new File(finalApproachOutputFilePath));
+			FileWriter outputRoundOutFileWriter = new FileWriter(new File(roundOutOutputFilePath));
+			FileWriter outputLandingFileWriter = new FileWriter(new File(landingOutputFilePath));
+			CSVWriter outputStepdownCSVWriter = new CSVWriter(outputStepdownFileWriter);
+			CSVWriter outputFinalApproachCSVWriter = new CSVWriter(outputFinalApproachFileWriter);
 			CSVWriter outputLandingCSVWriter = new CSVWriter(outputLandingFileWriter);
-			CSVWriter outputRoundOutCSVWriter = new CSVWriter(outputroundOutFileWriter);
-			CSVWriter outputILSCSVWriter = new CSVWriter(outputILSFileWriter);
-		
+			CSVWriter outputRoundOutCSVWriter = new CSVWriter(outputRoundOutFileWriter);
 			FileReader fileReader = new FileReader(filePath);
 			CSVReader csvReader = new CSVReader(fileReader);
 		){
-			int headerIndex = -1;
 
-				String[] headers = csvReader.readNext();
-				for (int i = 0; i < headers.length; i++) 
-				{
-					if(headers[i].equals("p-alt,ftMSL"))
-					{
-						headerIndex = i;
-					}
+			String[] headers = csvReader.readNext();
+			for (int i = 0; i < headers.length; i++) {
+				if(headers[i].equals("p-alt,ftMSL")) {
+					altitudeIndex = i;
+				} else if(headers[i].equals("copN1,dme-d")) {
+					dmeIndex = i;
+				} else if(headers[i].equals("copN1,h-def")) {
+					hdefIndex = i;
+				} else if(headers[i].equals("_Vind,_kias")) {
+					speedIndex = i;
+				} else if (headers[i].equals("copN1,v-def")) {
+					vdefIndex = i;
 				}
-				outputILSCSVWriter.writeNext(headers);
-				outputRoundOutCSVWriter.writeNext(headers);
-				outputLandingCSVWriter.writeNext(headers);
-				String[] row;
-				
-				while ((row = csvReader.readNext()) != null) 
-				{
-					if(Double.valueOf(row[headerIndex])>minimumsAltitude)
-					{
-						outputILSCSVWriter.writeNext(row);
-						numOfILSData++;
-					}
-					else if(Double.valueOf(row[headerIndex])>fieldElevation)
-					{
-						outputRoundOutCSVWriter.writeNext(row);
-						numOfRoundoutData++;
-					}
-					else
-					{
-						outputLandingCSVWriter.writeNext(row);
-						numOfLandingData++;
-					}
+			}
+			outputStepdownCSVWriter.writeNext(headers);
+			outputFinalApproachCSVWriter.writeNext(headers);
+			outputRoundOutCSVWriter.writeNext(headers);
+			outputLandingCSVWriter.writeNext(headers);
+			String[] row;
+			
+			while ((row = csvReader.readNext()) != null) 
+			{
+				if(Double.valueOf(row[dmeIndex])>intersectionDME) {
+					outputStepdownCSVWriter.writeNext(row);
+					numStepdown++;
+					altStepdown.add(Double.valueOf(row[altitudeIndex]));
+					dmeStepdown.add(Double.valueOf(row[dmeIndex]));
+					speedStepdown.add(Double.valueOf(row[speedIndex]));
+					hDefStepdown.add(Double.valueOf(row[hdefIndex]));
+
+				} else if(Double.valueOf(row[altitudeIndex])>minimumsAltitude) {
+					outputFinalApproachCSVWriter.writeNext(row);
+					numFinalApproach++;
+					vDefFinalApproach.add(Double.valueOf(row[vdefIndex]));
+					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
+					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
+
+				} else if(Double.valueOf(row[altitudeIndex])>fieldElevation){
+					outputRoundOutCSVWriter.writeNext(row);
+					numRoundout++;
+					altRoundout.add(Double.valueOf(row[altitudeIndex]));
+				} else {
+					outputLandingCSVWriter.writeNext(row);
+					numLanding++;
+					altLanding.add(Double.valueOf(row[altitudeIndex]));
+					hDefLanding.add(Double.valueOf(row[hdefIndex]));
+
 				}
+			}
 		}
 		catch(Exception e)
 		{
@@ -208,93 +237,39 @@ public class parser {
 			System.out.println(e);
 		}
 
+		data = new FlightData(
+			altStepdown,
+			dmeStepdown,
+			speedStepdown,
+			hDefStepdown,
+			vDefFinalApproach,
+			speedFinalApproach,
+			hDefFinalApproach,
+			altRoundout,
+			altLanding,
+			hDefLanding
+		);
+
+		// Instantiate new score object
+		score = new scoreCalculations(
+			name,
+			stepdownOutputFilePath,
+			finalApproachOutputFilePath,
+			roundOutOutputFilePath,
+			landingOutputFilePath,
+			numStepdown + numFinalApproach + numRoundout + numLanding, 
+			numStepdown,
+			numFinalApproach,
+			numRoundout,
+			numLanding,
+			data
+			);
+		
+		return score;
+		
+
 	}
 	
-	/**
-	 * retrieves the data that is from the column that matches the selected dataHeading
-	 * @param filePath
-	 * @param dataHeader
-	 * @return double[] an array of the data selected
-	 */
-	public static double[]getData(String filePath, String dataHeader) {
-		double[]data = new double[numOfData];
-		
-		int headerIndex = -1;
-		try (
-			FileReader fileReader = new FileReader(filePath);
-			CSVReader csvReader = new CSVReader(fileReader);
-		){
-			String[] headers = csvReader.readNext();
-			for (int i = 0; i < headers.length; i++) 
-			{
-				if(headers[i].equals(dataHeader))
-				{
-					headerIndex = i;
-				}
-			}
-			int index = 0; 
-			String[] row;
-			while ((row = csvReader.readNext()) != null) 
-			{
-				data[index] = Double.valueOf(row[headerIndex]);
-				index++;
-			}
-		}
-		catch(Exception e)
-		{
-			System.out.println("\nUnable to get data from csv file.");
-			System.out.println(e);
-		}
-		return data;
-	}
-	/**
-	 * @return the numOfData
-	 */
-	public static int getNumOfData() {
-		return numOfData;
-	}
-	/**
-	 * @param numOfData the numOfData to set
-	 */
-	public static void setNumOfData(int numOfData) {
-		parser.numOfData = numOfData;
-	}
-	/**
-	 * @return the numOfILSData
-	 */
-	public static int getNumOfILSData() {
-		return numOfILSData;
-	}
-	/**
-	 * @param numOfILSData the numOfILSData to set
-	 */
-	public static void setNumOfILSData(int numOfILSData) {
-		parser.numOfILSData = numOfILSData;
-	}
-	/**
-	 * @return the numOfLandingData
-	 */
-	public static int getNumOfLandingData() {
-		return numOfLandingData;
-	}
-	/**
-	 * @param numOfLandingData the numOfLandingData to set
-	 */
-	public static void setNumOfLandingData(int numOfLandingData) {
-		parser.numOfLandingData = numOfLandingData;
-	}
-	/**
-	 * @return the numOfRoundoutData
-	 */
-	public static int getNumOfRoundoutData() {
-		return numOfRoundoutData;
-	}
-	/**
-	 * @param numOfRoundoutData the numOfRoundoutData to set
-	 */
-	public static void setNumOfRoundoutData(int numOfRoundoutData) {
-		parser.numOfRoundoutData = numOfRoundoutData;
-	}
 	/**
 	 * @return the fieldElevation
 	 */
@@ -319,7 +294,5 @@ public class parser {
 	public static void setMinimumsAltitude(int minimumsAltitude) {
 		parser.minimumsAltitude = minimumsAltitude;
 	}
-	
 
-		
 }

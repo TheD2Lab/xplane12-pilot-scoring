@@ -52,17 +52,9 @@ public class Main {
 		String refactoredCSVFilePath = parser.parseData(originalCSVFilePath, namedOutputFolder, name);
 
 		//initializes the start and stop time for the ILS, Roundout, and landing phases
-		parser.initializeNumbers();
-		parser.parseOutSections(refactoredCSVFilePath, namedOutputFolder, name);
-		
-		// Calculate the score for the approach to landing
-		scoreCalculations score = new scoreCalculations();
-		score.scoreCalc(namedOutputFolder, name);
-		
-		// Print out values
-		//System.out.println("Data Points = " + score.getDataPoints() + " * 3 = Highest Possible Points = " + score.getHighestScore() + "\n");
-		System.out.println(score.getTotalScore() + " / " + score.getHighestScorePossible() + ":");
-		System.out.println(" %" + score.getPercentageScore());
+		scoreCalculations score = parser.parseOutSections(refactoredCSVFilePath, namedOutputFolder, name);
+		score.writeToFile(namedOutputFolder);
+		System.out.println("Done scoring...");
 	}
 	
 }
