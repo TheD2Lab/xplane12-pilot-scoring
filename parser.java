@@ -17,8 +17,8 @@ import com.opencsv.exceptions.CsvValidationException;
 public class parser {
 
 	// For ILS 34R KSEA. Change for different airport
-	private static int fieldElevation = 1025; 
-	private static int minimumsAltitude = 1090;
+	private static int minimumsAltitude = 572;
+	private static double initialAppFixDME = 22.2;
 	private static double intersectionDME = 6.3;
 	
 	/**
@@ -32,22 +32,23 @@ public class parser {
 		String refactoredFilePath = outputFolderPath + "//" + name + "_Refactored_Data.csv";
 		List<String[]> selectedColumns = new ArrayList<>();
 		List<String> columnNames = Arrays.asList(
-			"missn,_time",
+				"missn,_time",
 				"_Vind,_kias",
-				"Vtrue,_ktas",
+				"hpath,_true",
 				"Vtrue,_ktgs",
-				"pitch,__deg",
 				"_roll,__deg",
+				"_land,groll",
+				"pitch,__deg",
+				"__VVI,__fpm",
 				"p-alt,ftMSL",
-				"hding,_true",
+				"terrn,ftMSL",
 				"hding,__mag",
 				"__mag,_comp",
 				"__lat,__deg",
 				"__lon,__deg",
-				"___CG,ftMSL",
-				"copN1,h-def",
-				"copN1,v-def",
-				"copN1,dme-d"
+				"pilN1,dme-d",
+				"pilN1,h-def",
+				"pilN1,v-def"
 				);
 		int[] columnIndex = new int[columnNames.size()];
 		try(
@@ -170,6 +171,7 @@ public class parser {
 		int vdefIndex = -1;
 		int speedIndex = -1;
 		int timeIndex = -1;
+		int groundRollIndex = -1;
 
 		// Note: try-with-resources automatically closes files
 		try (
@@ -192,21 +194,23 @@ public class parser {
 					case "p-alt,ftMSL":
 						altitudeIndex = i;
 						break;
-					case"copN1,dme-d":
+					case"pilN1,dme-d":
 						dmeIndex = i;
 						break;
-					case "copN1,h-def":
+					case "pilN1,h-def":
 						hdefIndex = i;
 						break;
 					case "_Vind,_kias":
 						speedIndex = i;
 						break;
-					case "copN1,v-def":
+					case "pilN1,v-def":
 						vdefIndex = i;
 						break;
 					case "missn,_time":
 						timeIndex = i;
 						break;
+					case "_land,groll":
+						groundRollIndex = i;
 				}
 			}
 			outputStepdownCSVWriter.writeNext(headers);
@@ -217,7 +221,10 @@ public class parser {
 			
 			while ((row = csvReader.readNext()) != null) 
 			{
-				if(Double.valueOf(row[dmeIndex])>intersectionDME) {
+				if (Double.valueOf(row[dmeIndex]) > initialAppFixDME) {
+					continue;
+					
+				} else if(Double.valueOf(row[dmeIndex]) < initialAppFixDME && Double.valueOf(row[dmeIndex])>intersectionDME) {
 					outputStepdownCSVWriter.writeNext(row);
 					numStepdown++;
 					altStepdown.add(Double.valueOf(row[altitudeIndex]));
@@ -233,7 +240,7 @@ public class parser {
 					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
 					timeApproachStr = row[timeIndex];
 
-				} else if(Double.valueOf(row[altitudeIndex])>fieldElevation){
+				} else if(!(Double.valueOf(row[groundRollIndex])>0)){
 					outputRoundOutCSVWriter.writeNext(row);
 					numRoundout++;
 					altRoundout.add(Double.valueOf(row[altitudeIndex]));
@@ -289,22 +296,9 @@ public class parser {
 		);
 		
 		return score;
-		
 
 	}
 	
-	/**
-	 * @return the fieldElevation
-	 */
-	public static int getFieldElevation() {
-		return fieldElevation;
-	}
-	/**
-	 * @param fieldElevation the fieldElevation to set
-	 */
-	public static void setFieldElevation(int fieldElevation) {
-		parser.fieldElevation = fieldElevation;
-	}
 	/**
 	 * @return the minimumsAltitude
 	 */

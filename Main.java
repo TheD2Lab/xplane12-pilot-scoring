@@ -20,7 +20,7 @@ public class Main {
 		
 		String txtFilePath;
 		String outputFolderPath;
-
+		
 		// Initialize paths
 		if (args.length == 2) {
 			txtFilePath = args[0];

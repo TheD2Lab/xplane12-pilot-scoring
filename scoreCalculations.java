@@ -118,20 +118,21 @@ public class scoreCalculations {
 	//For the lateral/vertical of the plane
 	//Check if its within +/- 2 degrees of the designated line
 	private double localizerScorePenalty(List<Double> horizontalDef) {
-		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
 		for(double hdef : horizontalDef) {
 			double absValue = Math.abs(hdef);
-			if(absValue  < 0.1) {
-				continue;
-			} else if (absValue  <= 0.5) {	// 0.5 degrees 
-				penalty += 0.25 * maxPtPerMethod;
-			} else if (absValue  <= 1) {	// 1 degree
-				penalty += 0.50 * maxPtPerMethod;
-			} else if (absValue  <= 1.5) {	// 1.5 degrees
-				penalty += 0.75 * maxPtPerMethod;
-			} else if (absValue  > 1.5) {// Above 1.5 degrees
-				penalty += maxPtPerMethod;
+			if(absValue  < 0.5) {
+				penalty += 0;
+			} else if (absValue  <= 1) {
+				penalty += 0.2;
+			} else if (absValue  <= 1.5) {
+				penalty += 0.4;
+			} else if (absValue  <= 2) {
+				penalty += 0.6;
+			} else if (absValue  <= 2.5) {
+				penalty += 0.8;
+			} else {
+				penalty += 1;
 			}
 		}
 		return penalty;
@@ -145,22 +146,22 @@ public class scoreCalculations {
 	//For the lateral/vertical of the plane
 	//Check if its within +/- 2 degrees of the designated line
 	private double glideSlopeScorePenalty(List<Double> verticalDef) {
-		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
 		for(double vdef : verticalDef) {
 			double absValue = Math.abs(vdef);
 
-			if (absValue < 0.1) {
-				continue;
-			} else if (absValue <= 0.5) {	// 0.5 degrees
-				penalty += 0.25 * maxPtPerMethod;
-			} else if (absValue <= 1) {	// 1 degree
-				penalty += 0.50 * maxPtPerMethod;
-			}
-			else if (absValue <= 1.5) {	// 1.5 degrees
-				penalty += 0.75 * maxPtPerMethod;
-			} else if (absValue > 1.5) {
-				penalty += maxPtPerMethod; // Above 1.5 degrees 
+			if (absValue < 0.5) {
+				penalty += 0;
+			} else if (absValue <= 1.0) {
+				penalty += 0.2;
+			} else if (absValue <= 1.5) {
+				penalty += 0.4;
+			} else if (absValue <= 2.0) {
+				penalty += 0.6;
+			} else if (absValue <= 2.5) {
+				penalty += 0.8;
+			} else {
+				penalty += 1;
 			}
 		}
 		return penalty;
@@ -186,9 +187,17 @@ public class scoreCalculations {
 			while (dme < STEPDOWN_FIXES.get(currentFix).dme) {
 				currentFix++;
 			}
-
-			if (alt < STEPDOWN_FIXES.get(currentFix).altitude) {
-				penalty++;
+			
+			if (alt > STEPDOWN_FIXES.get(currentFix).altitude)
+			{
+				penalty += 0;
+			}
+			else if (alt < STEPDOWN_FIXES.get(currentFix).altitude - 100) {
+				penalty += (STEPDOWN_FIXES.get(currentFix).altitude - alt) / 100;
+			}
+			else
+			{
+				penalty += 1;
 			}
 		}
 		return penalty;
@@ -200,17 +209,16 @@ public class scoreCalculations {
 	 * @return double Returns the total penalty
 	 */
 	private double speedILSCalcPenalty(List<Double> speeds) {
-		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_ILS/3;
 		double penalty = 0;
+		int assignedSpeed = 90;
 		for(double speed : speeds) {
-			if (89 < speed && speed < 91) {
-				continue;
-			} else if (80 < speed && speed < 100) {
-				penalty += 0.25 * maxPtPerMethod;
-			} else if (75 < speed && speed < 105) {
-				penalty += 0.50 * maxPtPerMethod;
-			} else {
-				penalty += maxPtPerMethod;
+			double difference = Math.abs(speed - assignedSpeed);
+			if (difference < 10)
+			{
+				penalty += (difference / 10);
+			}
+			else {
+				penalty += 1;
 			}
 		}
 		return penalty;
@@ -259,18 +267,8 @@ public class scoreCalculations {
 	 */
 	public double scoreLanding(List<Double> altitude, List<Double> horizontalDef)
 	{
-		double maxPtPerMethod = MAX_PTS_PER_DATA_POINT_LANDING/2;
 		double penalty = 0; 
 		penalty += localizerScorePenalty(horizontalDef);
-		for(double alt: altitude) {
-			if(alt > parser.getFieldElevation()) {
-				if(alt - parser.getFieldElevation() > 5) {
-					penalty += 0.5 * maxPtPerMethod;
-				} else {
-					penalty += maxPtPerMethod;
-				}
-			}
-		}
 		return penalty;
 	}
 
@@ -300,25 +298,27 @@ public class scoreCalculations {
 
 		this.overallScore[0] = this.landingScore[0] + this.approachScore[0];
 	}
+	
+	// Below are housekeeping items
 
 	public void writeToFile(String outputLocation) {
 		String outputFile = outputLocation + "/" + this.participant + "_score.csv";
 		String[] headers = {
+			"Total Time",
+			"Overall Score",
 			"Approach Time",
 			"Approach Score",
 			"Landing Time",
-			"Landing Score",
-			"Total Time",
-			"Overall Score"
+			"Landing Score"
 		};
 
 		String[] data = {
+			String.valueOf(this.data.getTimeTotal()),
+			String.valueOf(getPercentageScore(scoreType.OVERALL)),
 			String.valueOf(this.data.getTimeApproach()),
 			String.valueOf(getPercentageScore(scoreType.APPROACH)),
 			String.valueOf(this.data.getTimeLanding()),
-			String.valueOf(getPercentageScore(scoreType.LANDING)),
-			String.valueOf(this.data.getTimeTotal()),
-			String.valueOf(getPercentageScore(scoreType.OVERALL))
+			String.valueOf(getPercentageScore(scoreType.LANDING))
 		};
 
 		try (
