@@ -32,23 +32,22 @@ public class parser {
 		String refactoredFilePath = outputFolderPath + "//" + name + "_Refactored_Data.csv";
 		List<String[]> selectedColumns = new ArrayList<>();
 		List<String> columnNames = Arrays.asList(
-				"missn,_time",
-				"_Vind,_kias",
-				"hpath,_true",
-				"Vtrue,_ktgs",
-				"_roll,__deg",
-				"_land,groll",
-				"pitch,__deg",
-				"__VVI,__fpm",
-				"p-alt,ftMSL",
-				"terrn,ftMSL",
-				"hding,__mag",
-				"__mag,_comp",
-				"__lat,__deg",
-				"__lon,__deg",
-				"pilN1,dme-d",
-				"pilN1,h-def",
-				"pilN1,v-def"
+				"missn,_time", // Mission Time starting from 0 in seconds
+				"_Vind,_kias", // Airspeed Indicator in knots
+				"engn1,__rpm", // Engine RPM Setting
+				"alpha,__deg", // Angle of Attach in degrees
+				"_roll,__deg", // Roll (bank) angle in degrees
+				"_land,groll", // Landing distance "ground roll" in feet
+				"pitch,__deg", // Airplane Pitch in degrees
+				"__VVI,__fpm", // Vertical Speed Indicator in feet per minute
+				"p-alt,ftMSL", // Altitude MSL in feet
+				"terrn,ftMSL", // Peak of terrain in feet
+				"hding,__mag", // Magnetic heading in degrees
+				"__lat,__deg", // Latitude in degrees
+				"__lon,__deg", // Longitude in degrees
+				"pilN1,dme-d", // DME distance in nautical miles
+				"pilN1,h-def", // Localizer deflection in dots
+				"pilN1,v-def"  // Glideslope deflection in dots
 				);
 		int[] columnIndex = new int[columnNames.size()];
 		try(
@@ -143,14 +142,23 @@ public class parser {
 		String landingOutputFilePath = outputFolderPath + "//" + name + "_Landing_Data.csv";
 
 		FlightData data;
+		// Stepdown portion
 		List<Double> altStepdown = new LinkedList<>();
 		List<Double> dmeStepdown = new LinkedList<>();
 		List<Double> speedStepdown = new LinkedList<>();
 		List<Double> hDefStepdown = new LinkedList<>();
+		List<Double> rollBankStepdown = new LinkedList<>();
+		// Final approach portion
 		List<Double> vDefFinalApproach = new LinkedList<>();
 		List<Double> speedFinalApproach = new LinkedList<>();
 		List<Double> hDefFinalApproach = new LinkedList<>();
+		List<Double> verticalSpeedFinalApp = new LinkedList<>();
+		List<Double> rollBankFinalApp = new LinkedList<>();
+		// Roundout portion
 		List<Double> altRoundout = new LinkedList<>();
+		List<Double> hDefRoundout = new LinkedList<>();
+		List<Double> rollBankRoundout = new LinkedList<>();
+		// Landing portion
 		List<Double> altLanding = new LinkedList<>();
 		List<Double> hDefLanding = new LinkedList<>();
 		String timeApproachStr = "";
@@ -165,6 +173,7 @@ public class parser {
 		int numRoundout = 0;
 		int numLanding = 0;
 
+		// the indexes for the X-Plane data we use for scoring and statistics
 		int altitudeIndex = -1;
 		int dmeIndex = -1;
 		int hdefIndex = -1;
@@ -172,6 +181,8 @@ public class parser {
 		int speedIndex = -1;
 		int timeIndex = -1;
 		int groundRollIndex = -1;
+		int verticalSpeedIndex = -1;
+		int rollBankAngleIndex = -1;
 
 		// Note: try-with-resources automatically closes files
 		try (
@@ -211,6 +222,13 @@ public class parser {
 						break;
 					case "_land,groll":
 						groundRollIndex = i;
+						break;
+					case "__VVI,__fpm":
+						verticalSpeedIndex = i;
+						break;
+					case "_roll,__deg":
+						rollBankAngleIndex = i;
+						break;
 				}
 			}
 			outputStepdownCSVWriter.writeNext(headers);
@@ -221,9 +239,11 @@ public class parser {
 			
 			while ((row = csvReader.readNext()) != null) 
 			{
+				// Do not start scoring until after participant reaches Initial Approach Fix - JIPOX
 				if (Double.valueOf(row[dmeIndex]) > initialAppFixDME) {
 					continue;
-					
+				
+				// ILS Stepdown portion
 				} else if(Double.valueOf(row[dmeIndex]) < initialAppFixDME && Double.valueOf(row[dmeIndex])>intersectionDME) {
 					outputStepdownCSVWriter.writeNext(row);
 					numStepdown++;
@@ -231,19 +251,28 @@ public class parser {
 					dmeStepdown.add(Double.valueOf(row[dmeIndex]));
 					speedStepdown.add(Double.valueOf(row[speedIndex]));
 					hDefStepdown.add(Double.valueOf(row[hdefIndex]));
+					rollBankStepdown.add(Double.valueOf(row[rollBankAngleIndex]));
 
+				// ILS Final Approach portion
 				} else if(Double.valueOf(row[altitudeIndex])>minimumsAltitude) {
 					outputFinalApproachCSVWriter.writeNext(row);
 					numFinalApproach++;
 					vDefFinalApproach.add(Double.valueOf(row[vdefIndex]));
 					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
+					verticalSpeedFinalApp.add(Double.valueOf(row[verticalSpeedIndex]));
 					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
 					timeApproachStr = row[timeIndex];
+					rollBankFinalApp.add(Double.valueOf(row[rollBankAngleIndex]));
 
+				// From minimums, descent to the runway portion
 				} else if(!(Double.valueOf(row[groundRollIndex])>0)){
 					outputRoundOutCSVWriter.writeNext(row);
 					numRoundout++;
+					hDefRoundout.add(Double.valueOf(row[hdefIndex]));
 					altRoundout.add(Double.valueOf(row[altitudeIndex]));
+					rollBankRoundout.add(Double.valueOf(row[rollBankAngleIndex]));
+					
+				// Wheels touch the ground portion
 				} else {
 					outputLandingCSVWriter.writeNext(row);
 					numLanding++;
@@ -273,8 +302,13 @@ public class parser {
 			speedFinalApproach,
 			hDefFinalApproach,
 			altRoundout,
+			hDefRoundout,
 			altLanding,
 			hDefLanding,
+			verticalSpeedFinalApp,
+			rollBankStepdown,
+			rollBankFinalApp,
+			rollBankRoundout,
 			timeApproach,
 			timeLanding,
 			timeTotal
