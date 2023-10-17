@@ -71,7 +71,7 @@ public class scoreCalculations {
 		STEPDOWN_FIXES = Collections.unmodifiableList(tmp);
 	}
 
-	private enum scoreType {
+	public enum scoreType {
 		APPROACH,
 		LANDING,
 		OVERALL
@@ -256,7 +256,7 @@ public class scoreCalculations {
 			{
 				penalty += 0;
 			}
-			else if (alt < STEPDOWN_FIXES.get(currentFix).altitude - 100) {
+			else if (alt > STEPDOWN_FIXES.get(currentFix).altitude - 100) {
 				penalty += (STEPDOWN_FIXES.get(currentFix).altitude - alt) / 100;
 			}
 			else
