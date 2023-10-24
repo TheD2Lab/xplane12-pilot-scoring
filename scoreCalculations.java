@@ -128,11 +128,9 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total score penalty for the localizer portion of the ILS approach
-	 * @param horizontalDef is all of the localizer position of the aircraft
+	 * @param horizontalDef is all of the localizer position of the aircraft in dots
 	 * @return double Returns the total penalty
 	 */
-	//For the lateral/vertical of the plane
-	//Check if its within +/- 2 degrees of the designated line
 	private double localizerScorePenalty(List<Double> horizontalDef, List<Double> bankAngle) {
 		double penalty = 0;
 		for (int i = 0; i < horizontalDef.size(); i++) {
@@ -174,11 +172,9 @@ public class scoreCalculations {
 	
 	/**
 	 * returns the total score penalty for the localizer in the landing portion
-	 * @param horizontalDef is all of the localizer position of the aircraft
+	 * @param horizontalDef is all of the localizer position of the aircraft in dots
 	 * @return double Returns the total penalty
 	 */
-	//For the lateral/vertical of the plane
-	//Check if its within +/- 2 degrees of the designated line
 	private double localizerScorePenaltyLanding(List<Double> horizontalDef) {
 		double penalty = 0;
 		for(double hdef : horizontalDef) {
@@ -201,11 +197,9 @@ public class scoreCalculations {
 
 	/**
 	 * returns the total score penalty for the glideslope portion of the ILS approach
-	 * @param verticalDef is all of the vertical position of the aircraft
+	 * @param verticalDef is all of the vertical position of the aircraft in dots
 	 * @return double Returns the total penalty
 	 */
-	//For the lateral/vertical of the plane
-	//Check if its within +/- 2 degrees of the designated line
 	private double glideSlopeScorePenalty(List<Double> verticalDef, List<Double> verticalSpeed) {
 		double penalty = 0;
 		for (int i = 0; i < verticalDef.size(); i++)
