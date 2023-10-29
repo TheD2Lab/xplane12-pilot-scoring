@@ -20,7 +20,7 @@ import com.opencsv.CSVWriter;
 public class scoreCalculations {
 
 	private final static int MAX_PTS_PER_DATA_POINT_ILS = 3;
-	private final static int MAX_PTS_PER_DATA_POINT_ROUNDOUT = 1; 
+	private final static int MAX_PTS_PER_DATA_POINT_ROUNDOUT = 2; 
 	private final static int MAX_PTS_PER_DATA_POINT_LANDING = 2;
 
 	private String participant;
@@ -218,9 +218,13 @@ public class scoreCalculations {
 			
 			double absValue = Math.abs(vdef);
 
-			if(absValue  < 2.5) {
-				penalty += absValue / 2.5;
-			} else {
+			if (verticalSpeed.get(i) < 1000)
+			{
+				if(absValue  < 2.5) {
+					penalty += absValue / 2.5;
+				} 
+			}
+			else {
 				penalty += 1;
 			}
 		}
@@ -236,28 +240,33 @@ public class scoreCalculations {
 	 * @param altitude the altitude of the aircraft during the ILS approach
 	 * @return
 	 */
-	private double altitudeILSCalcPenalty(List<Double> dmes, List<Double>altitudes) {
+	private double altitudeILSCalcPenalty(List<Double> dmes, List<Double>altitudes, List<Double> verticalSpeed) {
 		double penalty = 0;
 		int currentFix = 0;
-		Iterator<Double> dmeIter = dmes.iterator();
-		Iterator<Double> altIter = altitudes.iterator();
-		Double dme;
-		Double alt;
-
-		while(dmeIter.hasNext() && altIter.hasNext()) {
-			dme = dmeIter.next();
-			alt = altIter.next();
+		
+		for (int i = 0; i < dmes.size(); i++)
+		{
+			Double dmeVal = dmes.get(i);
+			Double altVal = altitudes.get(i);
+			
 			// check which fix plane is approaching
-			while (dme < STEPDOWN_FIXES.get(currentFix).dme) {
+			while (dmeVal < STEPDOWN_FIXES.get(currentFix).dme) {
 				currentFix++;
 			}
 			
-			if (alt > STEPDOWN_FIXES.get(currentFix).altitude)
+			if (verticalSpeed.get(i) < 1000)
 			{
-				penalty += 0;
-			}
-			else if (alt > STEPDOWN_FIXES.get(currentFix).altitude - 100) {
-				penalty += (STEPDOWN_FIXES.get(currentFix).altitude - alt) / 100;
+				if (altVal > STEPDOWN_FIXES.get(currentFix).altitude)
+				{
+					penalty += 0;
+				}
+				else if (altVal > STEPDOWN_FIXES.get(currentFix).altitude - 100) {
+					penalty += (STEPDOWN_FIXES.get(currentFix).altitude - altVal) / 100;
+				}
+				else {
+					penalty += 1;
+				}
+				
 			}
 			else
 			{
@@ -292,8 +301,8 @@ public class scoreCalculations {
 	}
 
 	public double scoreStepdownCalc(List<Double> horiDef, List<Double> speed, List<Double> altitude, List<Double> dme,
-			List<Double> rollBankStepdown) {
-		return localizerScorePenalty(horiDef, rollBankStepdown) + speedILSCalcPenalty(speed) + altitudeILSCalcPenalty(dme, altitude);
+			List<Double> rollBank, List<Double> verticalSpeed) {
+		return localizerScorePenalty(horiDef, rollBank) + speedILSCalcPenalty(speed) + altitudeILSCalcPenalty(dme, altitude, verticalSpeed);
 	}
 
 	/**
@@ -313,20 +322,22 @@ public class scoreCalculations {
 	 * @param altitude contains all the altitude information for the aircraft
 	 * @return double Returns the total Penalty
 	 */
-	public double scoreRoundOut(List<Double> altitude, List<Double> horiDef, List<Double> rollBankRoundout)
+	public double scoreRoundOut(List<Double> horiDef, List<Double> rollBank, List<Double> verticalSpeed)
 	{
-		double penalty =0;
-		double previousAlt = altitude.get(0);
-		for(int altIndex = 1; altIndex < altitude.size(); altIndex++) {
-			previousAlt = altitude.get(altIndex);
-			if(previousAlt >= altitude.get(altIndex)) {
-				continue;
+		double penalty = 0;
+		
+		for(int i = 0; i < verticalSpeed.size(); i++) {
+			
+			Double vert = verticalSpeed.get(i);
+			
+			if(vert < 1000) {
+				penalty += 0;
 			} else {
-				penalty += MAX_PTS_PER_DATA_POINT_ROUNDOUT;
+				penalty += 1;
 			}
-
 		}
-		penalty += localizerScorePenalty(horiDef, rollBankRoundout);
+		
+		penalty += localizerScorePenalty(horiDef, rollBank);
 		return penalty;
 	}
 
@@ -335,7 +346,7 @@ public class scoreCalculations {
 	 * @param altitude contains all the altitude information for the aircraft
 	 * @return double Returns the total Penalty
 	 */
-	public double scoreLanding(List<Double> altitude, List<Double> horiDef)
+	public double scoreLanding(List<Double> horiDef)
 	{
 		double penalty = 0; 
 		penalty += localizerScorePenaltyLanding(horiDef);
@@ -354,7 +365,8 @@ public class scoreCalculations {
 			data.getSpeedStepdown(), 
 			data.getAltStepdown(), 
 			data.getDmeStepdown(),
-			data.getRollBankStepdown()
+			data.getRollBankStepdown(),
+			data.getVerticalSpeedStepdown()
 		);
 
 		this.approachScore[0] -= scoreFinalApproachCalc(
@@ -366,13 +378,12 @@ public class scoreCalculations {
 		);
 
 		this.landingScore[0] -= scoreRoundOut(
-				data.getAltLanding(),
 				data.getHDefRoundout(),
-				data.getRollBankRoundout()
+				data.getRollBankRoundout(),
+				data.getVerticalSpeedRoundout()
 		);
 		
 		this.landingScore[0] -= scoreLanding(
-				data.getAltLanding(),
 				data.getHDefLanding()
 		);
 
