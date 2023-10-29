@@ -148,6 +148,7 @@ public class parser {
 		List<Double> speedStepdown = new LinkedList<>();
 		List<Double> hDefStepdown = new LinkedList<>();
 		List<Double> rollBankStepdown = new LinkedList<>();
+		List<Double> verticalSpeedStepdown = new LinkedList<>();
 		// Final approach portion
 		List<Double> vDefFinalApproach = new LinkedList<>();
 		List<Double> speedFinalApproach = new LinkedList<>();
@@ -158,6 +159,7 @@ public class parser {
 		List<Double> altRoundout = new LinkedList<>();
 		List<Double> hDefRoundout = new LinkedList<>();
 		List<Double> rollBankRoundout = new LinkedList<>();
+		List<Double> verticalSpeedRoundout = new LinkedList<>();
 		// Landing portion
 		List<Double> altLanding = new LinkedList<>();
 		List<Double> hDefLanding = new LinkedList<>();
@@ -183,6 +185,8 @@ public class parser {
 		int groundRollIndex = -1;
 		int verticalSpeedIndex = -1;
 		int rollBankAngleIndex = -1;
+		int engineRPMIndex = -1;
+		int magHeadingIndex = -1;
 
 		// Note: try-with-resources automatically closes files
 		try (
@@ -214,6 +218,9 @@ public class parser {
 					case "_Vind,_kias":
 						speedIndex = i;
 						break;
+					case "engn1,__rpm":
+						engineRPMIndex = i;
+						break;
 					case "pilN1,v-def":
 						vdefIndex = i;
 						break;
@@ -228,6 +235,9 @@ public class parser {
 						break;
 					case "_roll,__deg":
 						rollBankAngleIndex = i;
+						break;
+					case "hding,__mag":
+						magHeadingIndex = i;
 						break;
 				}
 			}
@@ -252,6 +262,7 @@ public class parser {
 					speedStepdown.add(Double.valueOf(row[speedIndex]));
 					hDefStepdown.add(Double.valueOf(row[hdefIndex]));
 					rollBankStepdown.add(Double.valueOf(row[rollBankAngleIndex]));
+					verticalSpeedStepdown.add(Double.valueOf(row[verticalSpeedIndex]));
 
 				// ILS Final Approach portion
 				} else if(Double.valueOf(row[altitudeIndex])>minimumsAltitude) {
@@ -264,13 +275,14 @@ public class parser {
 					timeApproachStr = row[timeIndex];
 					rollBankFinalApp.add(Double.valueOf(row[rollBankAngleIndex]));
 
-				// From minimums, descent to the runway portion
+				// Roundout portion: From minimums, descent to the runway portion
 				} else if(!(Double.valueOf(row[groundRollIndex])>0)){
 					outputRoundOutCSVWriter.writeNext(row);
 					numRoundout++;
 					hDefRoundout.add(Double.valueOf(row[hdefIndex]));
 					altRoundout.add(Double.valueOf(row[altitudeIndex]));
 					rollBankRoundout.add(Double.valueOf(row[rollBankAngleIndex]));
+					verticalSpeedRoundout.add(Double.valueOf(row[verticalSpeedIndex]));
 					
 				// Wheels touch the ground portion
 				} else {
@@ -306,6 +318,8 @@ public class parser {
 			altLanding,
 			hDefLanding,
 			verticalSpeedFinalApp,
+			verticalSpeedStepdown,
+			verticalSpeedRoundout,
 			rollBankStepdown,
 			rollBankFinalApp,
 			rollBankRoundout,
