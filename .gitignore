@@ -1,0 +1,18 @@
+# mac stuff
+*.DS_Store
+
+# IDE stuff
+.vscode/
+.classpath
+.project
+.settings/
+/results/
+/bin/
+bin/
+
+# Java stuff
+*.class
+
+
+
+
