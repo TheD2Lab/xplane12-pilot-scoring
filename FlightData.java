@@ -10,6 +10,7 @@ public class FlightData {
    private List<Double> speedStepdown;
    private List<Double> hDefStepdown;
    private List<Double> rollBankStepdown;
+   private List<Double> verticalSpeedStepdown;
    
    // Final Approach portion
    private List<Double> vDefFinalApproach;
@@ -21,6 +22,7 @@ public class FlightData {
    private List<Double> altRoundout;
    private List<Double> hDefRoundout;
    private List<Double> rollBankRoundout;
+   private List<Double> verticalSpeedRoundout;
    // Landing portion
    private List<Double> altLanding;
    private List<Double> hDefLanding;
@@ -38,6 +40,8 @@ public class FlightData {
       this.speedFinalApproach = new LinkedList<>();
       this.hDefFinalApproach = new LinkedList<>();
       this.verticalSpeedFinalApp = new LinkedList<>();
+      this.verticalSpeedStepdown = new LinkedList<>();
+      this.verticalSpeedRoundout = new LinkedList<>();
       this.altRoundout = new LinkedList<>();
       this.hDefRoundout = new LinkedList<>();
       this.altLanding = new LinkedList<>();
@@ -52,7 +56,8 @@ public class FlightData {
          List<Double> hDefStepdown, List<Double> vDefFinalApproach, List<Double> speedFinalApproach,
          List<Double> hDefFinalApproach, List<Double> altRoundout, List<Double> hDefRoundout, 
          List<Double> altLanding, List<Double> hDefLanding, List<Double> verticalSpeedFinalApp,
-         List<Double> rollBankStepdown, List<Double> rollBankFinalApp, List<Double> rollBankRoundout,
+         List<Double> verticalSpeedStepdown, List<Double> verticalSpeedRoundout, List<Double> rollBankStepdown,
+         List<Double> rollBankFinalApp, List<Double> rollBankRoundout,
          double timeApproach, double timeLanding, double timeTotal) {
       this.altStepdown = altStepdown;
       this.dmeStepdown = dmeStepdown;
@@ -66,6 +71,8 @@ public class FlightData {
       this.altLanding = altLanding;
       this.hDefLanding = hDefLanding;
       this.verticalSpeedFinalApp = verticalSpeedFinalApp;
+      this.verticalSpeedStepdown = verticalSpeedStepdown;
+      this.verticalSpeedRoundout = verticalSpeedRoundout;
       this.rollBankStepdown = rollBankStepdown;
       this.rollBankFinalApp = rollBankFinalApp;
       this.rollBankRoundout = rollBankRoundout;
@@ -149,6 +156,18 @@ public class FlightData {
    public void setVerticalSpeedFinalApp(List<Double> verticalSpeedFinalApp) {
 	  this.verticalSpeedFinalApp = verticalSpeedFinalApp;
    }
+   public List<Double> getVerticalSpeedStepdown() {
+	   return verticalSpeedStepdown;
+   }
+   public void setVerticalSpeedStepdown(List<Double> verticalSpeedStepdown) {
+	  this.verticalSpeedStepdown = verticalSpeedStepdown;
+   }
+   public List<Double> getVerticalSpeedRoundout() {
+	   return verticalSpeedRoundout;
+   }
+   public void setVerticalSpeedRoundout(List<Double> verticalSpeedRoundout) {
+	  this.verticalSpeedRoundout = verticalSpeedRoundout;
+   }
    public List<Double> getRollBankStepdown() {
 	   return rollBankStepdown;
    }
@@ -168,8 +187,7 @@ public class FlightData {
 	   this.rollBankRoundout = rollBankRoundout;
    }
 
-
-   
+   // Returning portions of the approach and landing
    public List<Double> gethDefStepdown() {
       return hDefStepdown;
    }
