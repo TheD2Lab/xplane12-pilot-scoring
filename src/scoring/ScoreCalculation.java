@@ -1,10 +1,10 @@
+package scoring;
 /*
  * How the Scoring Works 
  * For every data point, we will assign 3 possible points (latitude, height, speed)
  * All the measurements will be given the same values: 1 point for latitude, 1 for height, and 1 for speed
  * For every mistake in latitude, height, or speed, the deduction will either be 1/4, 1/2, or 1 point off
  */
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;

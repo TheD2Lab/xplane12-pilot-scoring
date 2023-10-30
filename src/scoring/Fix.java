@@ -1,3 +1,5 @@
+package scoring;
+
 public class Fix {
    public double dme;
    public int altitude;

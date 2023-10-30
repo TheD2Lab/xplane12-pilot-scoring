@@ -1,5 +1,6 @@
-import java.io.File;
+package scoring;
 
+import java.io.File;
 import org.apache.commons.compress.utils.FileNameUtils;
 
 public class Main {
