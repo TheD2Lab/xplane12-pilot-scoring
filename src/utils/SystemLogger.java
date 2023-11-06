@@ -10,7 +10,7 @@ import java.util.Date;
 /*
  * responsible for keeping track of the progress of the program
  */
-public class systemLogger {
+public class SystemLogger {
 	private static String logFilePath = "";
 	
 	/**

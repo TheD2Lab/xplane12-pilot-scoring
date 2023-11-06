@@ -31,7 +31,7 @@ public class GazeTrimmer {
 	public static boolean trimGazeFile(String inputFile, String outputFolder, List<Pair<String, LocalDateTime>> timestamps) {
 
 		if (timestamps.size() == 0) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "No window timestamps were provided\n");
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "No window timestamps were provided\n");
 		}
 		LocalDateTime gazeStartTime = null;
 		DateTimeFormatter gpTimeFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd kk:mm:ss.SSS");	// time format in gazepoint data
@@ -64,7 +64,7 @@ public class GazeTrimmer {
 
 			// check there is a timestamp index
 			if (timestampIndex == -1) {
-				systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "No time column in file" + inputFile +"\n");
+				SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "No time column in file" + inputFile +"\n");
 				return false;
 			}
 
@@ -102,19 +102,19 @@ public class GazeTrimmer {
 			}
 
 		} catch(FileNotFoundException e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to open file\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to open file\n" + e.toString());
 			return false;
 		} catch(IOException e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to read file\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to read file\n" + e.toString());
 			return false;
 		} catch (CsvValidationException e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to read csv file\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to read csv file\n" + e.toString());
 			return false;
 		} catch (DateTimeParseException e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Time format cannot be parsed\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Time format cannot be parsed\n" + e.toString());
 			return false;
 		} catch (Exception e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unexpected error\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unexpected error\n" + e.toString());
 			return false;
 		}
 
@@ -127,7 +127,7 @@ public class GazeTrimmer {
 	 * @param args none
 	 */
 	public static void main(String[] args) {
-		systemLogger.createSystemLog("C:/Users/ashkj/Documents/GitHub/xplane12-pilot-scoring/src/utils");
+		SystemLogger.createSystemLog("C:/Users/ashkj/Documents/GitHub/xplane12-pilot-scoring/src/utils");
 		String inputFile = "data/Kayla _fixations.csv";
 		String outputFolder = "";
 		List<Pair<String, LocalDateTime>> times = new LinkedList<>();

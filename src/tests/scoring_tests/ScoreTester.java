@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 
-import utils.systemLogger;
+import utils.SystemLogger;
 import scoring.Parser;
 import scoring.ScoreCalculation;
 import scoring.ScoreCalculation.scoreType;
@@ -24,7 +24,7 @@ public class ScoreTester {
 		outputFolder = currentPath + "output/";
 		new File(outputFolder).mkdirs();
 		expectedFolder = currentPath + "expected_output/";
-		systemLogger.createSystemLog(outputFolder);
+		SystemLogger.createSystemLog(outputFolder);
 		ScoreCalculation score = generateOutput();
 		checkApproach(score);
 	}
@@ -32,7 +32,7 @@ public class ScoreTester {
 	private static ScoreCalculation generateOutput() {
 		ScoreCalculation score = Parser.parseOutSections(inputFile, outputFolder, name);
 		score.writeToFile(outputFolder);
-		systemLogger.writeToSystemLog(Level.INFO, inputFile, expectedFolder);
+		SystemLogger.writeToSystemLog(Level.INFO, inputFile, expectedFolder);
 		return score;
 	}
 

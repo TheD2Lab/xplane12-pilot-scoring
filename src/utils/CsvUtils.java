@@ -36,10 +36,10 @@ public class CsvUtils {
 			outputCSVWriter.writeNext(headers);
 			outputCSVWriter.writeAll(data);
 		} catch (FileNotFoundException e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to open file" + outputFile + "\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Unable to open file" + outputFile + "\n" + e.toString());
 			return false;
 		} catch (IOException e) {
-			systemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Error writing to" + outputFile + "\n" + e.toString());
+			SystemLogger.writeToSystemLog(Level.SEVERE, GazeTrimmer.class.getName(), "Error writing to" + outputFile + "\n" + e.toString());
 			return false;
 		} 
 		return true;
