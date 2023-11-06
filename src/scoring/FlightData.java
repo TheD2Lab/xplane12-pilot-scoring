@@ -32,6 +32,8 @@ public class FlightData {
    private double timeTotal = 0;
 
    FlightData() {
+      // implemented as LinkedList because insertion at end is O(1)
+      // ArrayLists were not used intentionally!!!
       this.altStepdown = new LinkedList<>();
       this.dmeStepdown = new LinkedList<>();
       this.speedStepdown = new LinkedList<>();
