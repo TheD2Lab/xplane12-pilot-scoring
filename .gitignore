@@ -13,6 +13,9 @@ bin/
 # Java stuff
 *.class
 
+# Logger
+SystemLog.txt
+
 
 
 

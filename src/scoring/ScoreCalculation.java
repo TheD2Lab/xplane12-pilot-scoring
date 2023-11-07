@@ -132,9 +132,14 @@ public class ScoreCalculation {
 	 */
 	private double localizerScorePenalty(List<Double> horizontalDef, List<Double> bankAngle) {
 		double penalty = 0;
-		for (int i = 0; i < horizontalDef.size(); i++) {
-			double hdef = horizontalDef.get(i);
-			double bank = bankAngle.get(i);
+		double hdef;
+		double bank;
+		Iterator<Double> hDefIter = horizontalDef.iterator();
+		Iterator<Double> baIterator = bankAngle.iterator();
+
+		while(hDefIter.hasNext()) {		// horizontalDef and bankAngle are the same length. We only check one.
+			hdef = hDefIter.next();
+			bank = baIterator.next();
 			
 			localizerAddedTotal += hdef;
 			bankAngleAddedTotal += bank;
@@ -201,17 +206,21 @@ public class ScoreCalculation {
 	 */
 	private double glideSlopeScorePenalty(List<Double> verticalDef, List<Double> verticalSpeed) {
 		double penalty = 0;
-		for (int i = 0; i < verticalDef.size(); i++)
-		{
-			double vsspeed = verticalSpeed.get(i);
-			verticalSpeedAddedTotal += vsspeed;
-			
-			double vdef = verticalDef.get(i);
-			glideslopeAddedTotal += vdef;
-			
-			double absValue = Math.abs(vdef);
+		double vSpeed;
+		double vDef;
+		Iterator<Double> vDefIter = verticalDef.iterator();		// verticalDef is a LinkedList
+		Iterator<Double> vSpeedIter = verticalSpeed.iterator();	// verticalSpeed is a LinkedList
 
-			if (verticalSpeed.get(i) < 1000)
+		while(vDefIter.hasNext())	{	// verticalDef and vertical speed are the same length. We only check one.
+			vSpeed = vSpeedIter.next();
+			verticalSpeedAddedTotal += vSpeed;
+			
+			vDef = vDefIter.next();
+			glideslopeAddedTotal += vDef;
+			
+			double absValue = Math.abs(vDef);
+
+			if (vSpeed < 1000)
 			{
 				if(absValue  < 2.5) {
 					penalty += absValue / 2.5;
@@ -236,18 +245,28 @@ public class ScoreCalculation {
 	private double altitudeILSCalcPenalty(List<Double> dmes, List<Double>altitudes, List<Double> verticalSpeed) {
 		double penalty = 0;
 		int currentFix = 0;
-		
-		for (int i = 0; i < dmes.size(); i++)
-		{
-			Double dmeVal = dmes.get(i);
-			Double altVal = altitudes.get(i);
-			
+
+		// Use iterators to optimize LinkedList support. Flight Data uses LinkedList.
+		// Indexing a LinkedList using list[i] is O(n).
+		// If this does not make sense to you, please stop programming and review data structures 101
+		Iterator<Double> dmeIter = dmes.iterator();
+		Iterator<Double> altIter = altitudes.iterator();
+		Iterator<Double> vsIter = verticalSpeed.iterator();
+		double dmeVal;
+		double altVal;
+		double vertSpeed;
+
+		while(dmeIter.hasNext() && altIter.hasNext()) {
+			dmeVal = dmeIter.next();
+			altVal = altIter.next();
+			vertSpeed = vsIter.next();	
+
 			// check which fix plane is approaching
 			while (dmeVal < STEPDOWN_FIXES.get(currentFix).dme) {
 				currentFix++;
 			}
 			
-			if (verticalSpeed.get(i) < 1000)
+			if (vertSpeed < 1000)
 			{
 				if (altVal > STEPDOWN_FIXES.get(currentFix).altitude)
 				{
@@ -318,10 +337,13 @@ public class ScoreCalculation {
 	public double scoreRoundOut(List<Double> horiDef, List<Double> rollBank, List<Double> verticalSpeed)
 	{
 		double penalty = 0;
+		double vert;
+		Iterator<Double> vsIter = verticalSpeed.iterator();
+
 		
-		for(int i = 0; i < verticalSpeed.size(); i++) {
+		while(vsIter.hasNext()) {
 			
-			Double vert = verticalSpeed.get(i);
+			vert = vsIter.next();
 			
 			if(vert < 1000) {
 				penalty += 0;

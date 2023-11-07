@@ -4,7 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.logging.Level;
-import utils.systemLogger;
+import utils.SystemLogger;
 
 public class TestUtils {
 
@@ -28,7 +28,7 @@ public class TestUtils {
 			}
 			return true;
 		} catch (IOException e) {
-			systemLogger.writeToSystemLog(Level.WARNING, TestUtils.class.getName(), "Could not compare " + expectedFile + " and " + testFile);
+			SystemLogger.writeToSystemLog(Level.WARNING, TestUtils.class.getName(), "Could not compare " + expectedFile + " and " + testFile);
 		}
 		return false;
 	}
