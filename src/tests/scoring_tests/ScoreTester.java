@@ -5,11 +5,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 
+import utils.CsvUtils;
 import utils.SystemLogger;
 import scoring.Parser;
 import scoring.ScoreCalculation;
 import scoring.ScoreCalculation.scoreType;
-import utils.TestUtils;
 
 public class ScoreTester {
 	
@@ -43,7 +43,7 @@ public class ScoreTester {
 	private static void checkScoresFile() {
 		String expectedFile = expectedFolder + "/Expected_aoi_transitionFeatures.csv";
 		String testFile = outputFolder + "/Test_aoi_transitionFeatures.csv";
-		assert TestUtils.compareFiles(expectedFile, testFile) : "Incorrect Transition Features";
+		assert CsvUtils.compareFiles(expectedFile, testFile) : "Incorrect Transition Features";
 	}
 	
 }

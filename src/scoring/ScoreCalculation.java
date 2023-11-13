@@ -470,6 +470,10 @@ public class ScoreCalculation {
 		return this.participant;
 	}
 
+	public FlightData getFlightData() {
+		return data;
+	}
+
 	/**
 	 * @return the numOfData
 	 */
@@ -534,27 +538,18 @@ public class ScoreCalculation {
 		this.numOfRoundoutData = numOfRoundoutData;
 	}
 
-	public void setStepdownFile(String filePath) {
-		this.stepdownFile = filePath;
-	}
 	public String getStepdownFile() {
 		return this.stepdownFile;
 	}
-	public void setFinalApproachFile(String filePath) {
-		this.finalApproachFile = filePath;
-	}
+
 	public String getFinalApproachFile(String filePath) {
 		return this.finalApproachFile;
 	}
-	public void setRoundoutFile(String filePath) {
-		this.roundoutFile = filePath;
-	}
+
 	public String getRoundoutFile() {
 		return this.roundoutFile;
 	}
-	public void setLandingFile(String filePath) {
-		this.landingFile = filePath;
-	}
+
 	public String getLandingFile() {
 		return this.landingFile;
 	}

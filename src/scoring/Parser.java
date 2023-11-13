@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -20,6 +22,7 @@ public class Parser {
 	private static int minimumsAltitude = 572;
 	private static double initialAppFixDME = 22.2;
 	private static double intersectionDME = 6.3;
+	private static DateTimeFormatter sysTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd kk:mm:ss");
 	
 	/**
 	 * parses out only the useful/needed data into a different csv file
@@ -142,6 +145,7 @@ public class Parser {
 		String landingOutputFilePath = outputFolderPath + "//" + name + "_Landing_Data.csv";
 
 		FlightData data;
+		List<Double> sysTimes = new LinkedList<>();
 		// Stepdown portion
 		List<Double> altStepdown = new LinkedList<>();
 		List<Double> dmeStepdown = new LinkedList<>();
@@ -169,13 +173,22 @@ public class Parser {
 		double timeLanding = 0;
 		double timeTotal = 0;
 
-		// save file paths to score object
+		// count number of entries for each portion of flight
 		int numStepdown = 0;
 		int numFinalApproach = 0;
 		int numRoundout = 0;
 		int numLanding = 0;
 
+		// timestamps
+		LocalDateTime beginFlightTimestamp = null;
+   	LocalDateTime beginApproachTimestamp = null;
+   	LocalDateTime beginRoundOutTimestamp = null;
+   	LocalDateTime beginLandingTimestamp = null;
+   	LocalDateTime endFlightTimestamp = null;
+		String endFlightTimeString = null;
+
 		// the indexes for the X-Plane data we use for scoring and statistics
+		int sysTimesIndex = -1;
 		int altitudeIndex = -1;
 		int dmeIndex = -1;
 		int hdefIndex = -1;
@@ -206,6 +219,9 @@ public class Parser {
 			for (int i = 0; i < headers.length; i++) {
 
 				switch (headers[i]) {
+					case "sys_time":
+						sysTimesIndex = i;
+						break;
 					case "p-alt,ftMSL":
 						altitudeIndex = i;
 						break;
@@ -251,6 +267,9 @@ public class Parser {
 			{
 				// Do not start scoring until after participant reaches Initial Approach Fix - JIPOX
 				if (Double.valueOf(row[dmeIndex]) > initialAppFixDME) {
+					if (sysTimesIndex != -1 && beginFlightTimestamp == null) {
+						beginFlightTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+					}
 					continue;
 				
 				// ILS Stepdown portion
@@ -263,6 +282,9 @@ public class Parser {
 					hDefStepdown.add(Double.valueOf(row[hdefIndex]));
 					rollBankStepdown.add(Double.valueOf(row[rollBankAngleIndex]));
 					verticalSpeedStepdown.add(Double.valueOf(row[verticalSpeedIndex]));
+					if (sysTimesIndex != -1 && beginApproachTimestamp == null) {
+						beginApproachTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+					} 
 
 				// ILS Final Approach portion
 				} else if(Double.valueOf(row[altitudeIndex])>minimumsAltitude) {
@@ -283,6 +305,9 @@ public class Parser {
 					altRoundout.add(Double.valueOf(row[altitudeIndex]));
 					rollBankRoundout.add(Double.valueOf(row[rollBankAngleIndex]));
 					verticalSpeedRoundout.add(Double.valueOf(row[verticalSpeedIndex]));
+					if (sysTimesIndex != -1 && beginRoundOutTimestamp == null) {
+						beginRoundOutTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+					} 
 					
 				// Wheels touch the ground portion
 				} else {
@@ -290,8 +315,19 @@ public class Parser {
 					numLanding++;
 					altLanding.add(Double.valueOf(row[altitudeIndex]));
 					hDefLanding.add(Double.valueOf(row[hdefIndex]));
+					if (sysTimesIndex != -1 && beginLandingTimestamp == null) {
+						beginLandingTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+					} 
 				}
-				timeTotalStr = row[timeIndex];
+
+				if (Double.valueOf(row[speedIndex]) > 0) {
+					timeTotalStr = row[timeIndex];
+					if (sysTimesIndex != -1)
+						endFlightTimeString = row[sysTimesIndex];
+				}
+			}
+			if (endFlightTimeString != null) {
+				endFlightTimestamp = LocalDateTime.parse(endFlightTimeString, sysTimeFormat);
 			}
 		}
 		catch(Exception e)
@@ -305,28 +341,58 @@ public class Parser {
 		timeLanding = timeTotal - timeApproach;
 
 		// construct flight data object to pass to scorer
-		data = new FlightData(
-			altStepdown,
-			dmeStepdown,
-			speedStepdown,
-			hDefStepdown,
-			vDefFinalApproach,
-			speedFinalApproach,
-			hDefFinalApproach,
-			altRoundout,
-			hDefRoundout,
-			altLanding,
-			hDefLanding,
-			verticalSpeedFinalApp,
-			verticalSpeedStepdown,
-			verticalSpeedRoundout,
-			rollBankStepdown,
-			rollBankFinalApp,
-			rollBankRoundout,
-			timeApproach,
-			timeLanding,
-			timeTotal
-		);
+		if (sysTimesIndex == -1) {
+			data = new FlightData(
+				altStepdown,
+				dmeStepdown,
+				speedStepdown,
+				hDefStepdown,
+				vDefFinalApproach,
+				speedFinalApproach,
+				hDefFinalApproach,
+				altRoundout,
+				hDefRoundout,
+				altLanding,
+				hDefLanding,
+				verticalSpeedFinalApp,
+				verticalSpeedStepdown,
+				verticalSpeedRoundout,
+				rollBankStepdown,
+				rollBankFinalApp,
+				rollBankRoundout,
+				timeApproach,
+				timeLanding,
+				timeTotal
+			);
+		} else {
+			data = new FlightData(
+				beginFlightTimestamp,
+				beginApproachTimestamp,
+				beginRoundOutTimestamp,
+				beginLandingTimestamp,
+				endFlightTimestamp,
+				altStepdown,
+				dmeStepdown,
+				speedStepdown,
+				hDefStepdown,
+				vDefFinalApproach,
+				speedFinalApproach,
+				hDefFinalApproach,
+				altRoundout,
+				hDefRoundout,
+				altLanding,
+				hDefLanding,
+				verticalSpeedFinalApp,
+				verticalSpeedStepdown,
+				verticalSpeedRoundout,
+				rollBankStepdown,
+				rollBankFinalApp,
+				rollBankRoundout,
+				timeApproach,
+				timeLanding,
+				timeTotal
+			);
+		}
 
 		// Instantiate new score object
 		score = new ScoreCalculation(

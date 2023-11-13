@@ -16,6 +16,10 @@ bin/
 # Logger
 SystemLog.txt
 
+# local testing
+local_outputs/
+
+
 
 
 
