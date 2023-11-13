@@ -1,5 +1,6 @@
 package utils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -21,7 +22,7 @@ import com.opencsv.exceptions.CsvValidationException;
 public class CsvUtils {
 
     /**
-	 * Creates and writes data to a csv file
+	 * Creates csv file and writes headers and data to the file.
 	 * @param outputFile	name of file to write to
 	 * @param headers		table headers
 	 * @param data			table data
@@ -81,5 +82,30 @@ public class CsvUtils {
                 csvReader.close();
             }
         }
+	}
+
+    /**
+    * Compares two files and returns true if their contents are the same.
+    * @param expectedFile known file.
+    * @param testFile file to test.
+    * @return if the file contents match.
+    */
+   public static boolean compareFiles(String expectedFile, String testFile) {
+		String eLine;
+		String tLine;
+		try (
+			BufferedReader expectedReader = new BufferedReader(new FileReader(expectedFile));
+			BufferedReader testFileReader = new BufferedReader(new FileReader(testFile));
+		){
+			while ((eLine = expectedReader.readLine()) != null && (tLine = testFileReader.readLine()) != null) {
+				if (!eLine.equalsIgnoreCase(tLine)) {
+					return false;
+				}
+			}
+			return true;
+		} catch (IOException e) {
+			SystemLogger.writeToSystemLog(Level.WARNING, CsvUtils.class.getName(), "Could not compare " + expectedFile + " and " + testFile);
+		}
+		return false;
 	}
 }

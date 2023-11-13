@@ -22,11 +22,14 @@ import com.opencsv.exceptions.CsvValidationException;
 public class GazeTrimmer {
 
 	/**
-	 * Trims gaze csv files into windows associated with different parts the simulation
-	 * @param inputFile		CSV file to be trimmed or cut into windows
-	 * @param outputFolder	Directory to save new csv files
-	 * @param timestamps	List of labels and timestamps of important parts of the simulation
-	 * @return				whether trim was successful
+	 * Trims gaze csv files into windows associated with different parts the simulation. Timestamps are the start times of each window.
+	 * Windows end at the start of the following timestamp. Make sure to include an ending timestamp for the last window to trimmed, otherwise 
+	 * the window will not be created. If you are unsure of the end, use LocalDateTime.now() assuming all other timestamps occurred before
+	 * running the timeGazeFile.
+	 * @param inputFile		CSV file to be trimmed or cut into windows.
+	 * @param outputFolder	Directory to save new csv files.
+	 * @param timestamps		List of labels and timestamps of important parts of the simulation.
+	 * @return					whether trim was successful.
 	 */
 	public static boolean trimGazeFile(String inputFile, String outputFolder, List<Pair<String, LocalDateTime>> timestamps) {
 
@@ -57,7 +60,6 @@ public class GazeTrimmer {
 					String timeHeader = headers[i];
 					gazeStartTime = LocalDateTime.parse(timeHeader.substring(timeHeader.indexOf("(")+1, timeHeader.indexOf(")")), gpTimeFormat);
 					timestampIndex = i;
-					System.out.println(gazeStartTime);
 					break;
 				}
 			}
@@ -92,7 +94,7 @@ public class GazeTrimmer {
 					}
 
 					// write data to file 
-					String outputFile = outputFolder + fileName + "_" + windowName + ".csv";
+					String outputFile = outputFolder+ "/" + fileName + "_" + windowName + ".csv";
 					CsvUtils.writeCsvFile(outputFile, headers, data);
 					data = new LinkedList<>(); 	// clear data list
 					data.add(nextLine);
@@ -118,12 +120,11 @@ public class GazeTrimmer {
 			return false;
 		}
 
-
 		return true;
 	}
 
 	/**
-	 * Used for testing this class 
+	 * Used for testing GazeTrimmer class.
 	 * @param args none
 	 */
 	public static void main(String[] args) {
