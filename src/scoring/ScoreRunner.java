@@ -103,7 +103,7 @@ public class ScoreRunner {
 		if (times.size() > 0) {
 			new File(outputFolder).mkdirs();
 			// trim files
-			for (int i = 2; i < gazeFiles.length; i++) {
+			for (int i = 0; i < gazeFiles.length; i++) {
 				GazeTrimmer.trimGazeFile(gazeFiles[i], outputFolder, times);
 			}
 		}
