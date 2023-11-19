@@ -145,7 +145,6 @@ public class Parser {
 		String landingOutputFilePath = outputFolderPath + "//" + name + "_landing_data.csv";
 
 		FlightData data;
-		List<Double> sysTimes = new LinkedList<>();
 		// Stepdown portion
 		List<Double> altStepdown = new LinkedList<>();
 		List<Double> dmeStepdown = new LinkedList<>();
