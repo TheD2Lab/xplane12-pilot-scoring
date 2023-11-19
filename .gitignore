@@ -18,6 +18,7 @@ SystemLog.txt
 
 # local testing
 local_outputs/
+**/output/
 
 
 

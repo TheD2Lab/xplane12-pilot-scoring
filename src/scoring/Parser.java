@@ -90,7 +90,7 @@ public class Parser {
 	}
 
 	/**
-	 * changes a txt file into a csv file
+	 * Changes a txt file into a csv file
 	 * @param filePath txt file to be converted
 	 * @param outputFolderPath directory to save csv file
 	 * @param name name of participant
@@ -131,18 +131,14 @@ public class Parser {
 	}
 
 	/**
-	 * parses out the phases of the flight into different csv files
+	 * Parses out the phases of the flight and returns a ScoreCalculations object.
 	 * @param filePath csv file to be parsed
 	 * @param outputFolderPath directory to save output files
 	 * @param name name of the participant
 	 */
-	public static ScoreCalculation parseOutSections(String filePath, String outputFolderPath, String name) {
+	public static ScoreCalculation parseFlightData(String filePath, String outputFolderPath, String name) {
 
 		ScoreCalculation score;
-		String stepdownOutputFilePath = outputFolderPath + "//" + name + "_stepdown_data.csv";
-		String finalApproachOutputFilePath = outputFolderPath + "//" + name + "_approach_data.csv";
-		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_roundout_data.csv";
-		String landingOutputFilePath = outputFolderPath + "//" + name + "_landing_data.csv";
 
 		FlightData data;
 		// Stepdown portion
@@ -202,14 +198,6 @@ public class Parser {
 
 		// Note: try-with-resources automatically closes files
 		try (
-			FileWriter outputStepdownFileWriter = new FileWriter(new File(stepdownOutputFilePath));
-			FileWriter outputFinalApproachFileWriter = new FileWriter(new File(finalApproachOutputFilePath));
-			FileWriter outputRoundOutFileWriter = new FileWriter(new File(roundOutOutputFilePath));
-			FileWriter outputLandingFileWriter = new FileWriter(new File(landingOutputFilePath));
-			CSVWriter outputStepdownCSVWriter = new CSVWriter(outputStepdownFileWriter);
-			CSVWriter outputFinalApproachCSVWriter = new CSVWriter(outputFinalApproachFileWriter);
-			CSVWriter outputLandingCSVWriter = new CSVWriter(outputLandingFileWriter);
-			CSVWriter outputRoundOutCSVWriter = new CSVWriter(outputRoundOutFileWriter);
 			FileReader fileReader = new FileReader(filePath);
 			CSVReader csvReader = new CSVReader(fileReader);
 		){
@@ -256,10 +244,6 @@ public class Parser {
 						break;
 				}
 			}
-			outputStepdownCSVWriter.writeNext(headers);
-			outputFinalApproachCSVWriter.writeNext(headers);
-			outputRoundOutCSVWriter.writeNext(headers);
-			outputLandingCSVWriter.writeNext(headers);
 			String[] row;
 			
 			while ((row = csvReader.readNext()) != null) 
@@ -273,7 +257,6 @@ public class Parser {
 				
 				// ILS Stepdown portion
 				} else if(Double.valueOf(row[dmeIndex]) < initialAppFixDME && Double.valueOf(row[dmeIndex])>intersectionDME) {
-					outputStepdownCSVWriter.writeNext(row);
 					numStepdown++;
 					altStepdown.add(Double.valueOf(row[altitudeIndex]));
 					dmeStepdown.add(Double.valueOf(row[dmeIndex]));
@@ -287,7 +270,6 @@ public class Parser {
 
 				// ILS Final Approach portion
 				} else if(Double.valueOf(row[altitudeIndex])>minimumsAltitude) {
-					outputFinalApproachCSVWriter.writeNext(row);
 					numFinalApproach++;
 					vDefFinalApproach.add(Double.valueOf(row[vdefIndex]));
 					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
@@ -298,7 +280,6 @@ public class Parser {
 
 				// Roundout portion: From minimums, descent to the runway portion
 				} else if(!(Double.valueOf(row[groundRollIndex])>0)){
-					outputRoundOutCSVWriter.writeNext(row);
 					numRoundout++;
 					hDefRoundout.add(Double.valueOf(row[hdefIndex]));
 					altRoundout.add(Double.valueOf(row[altitudeIndex]));
@@ -310,7 +291,6 @@ public class Parser {
 					
 				// Wheels touch the ground portion
 				} else {
-					outputLandingCSVWriter.writeNext(row);
 					numLanding++;
 					altLanding.add(Double.valueOf(row[altitudeIndex]));
 					hDefLanding.add(Double.valueOf(row[hdefIndex]));
@@ -396,10 +376,6 @@ public class Parser {
 		// Instantiate new score object
 		score = new ScoreCalculation(
 			name,
-			stepdownOutputFilePath,
-			finalApproachOutputFilePath,
-			roundOutOutputFilePath,
-			landingOutputFilePath,
 			numStepdown + numFinalApproach + numRoundout + numLanding, 
 			numStepdown,
 			numFinalApproach,

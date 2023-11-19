@@ -67,7 +67,7 @@ public class ScoreRunner {
 		}
 
 		// generate pilot success score and other metrics
-		ScoreCalculation score = Parser.parseOutSections(xplaneFilePath, scoringOutputFolder, name);
+		ScoreCalculation score = Parser.parseFlightData(xplaneFilePath, scoringOutputFolder, name);
 		score.writeToFile(scoringOutputFolder);
 		System.out.println("Done scoring...");
 

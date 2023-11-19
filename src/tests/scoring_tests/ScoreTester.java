@@ -30,7 +30,7 @@ public class ScoreTester {
 	}
 
 	private static ScoreCalculation generateOutput() {
-		ScoreCalculation score = Parser.parseOutSections(inputFile, outputFolder, name);
+		ScoreCalculation score = Parser.parseFlightData(inputFile, outputFolder, name);
 		score.writeToFile(outputFolder);
 		SystemLogger.writeToSystemLog(Level.INFO, inputFile, expectedFolder);
 		return score;

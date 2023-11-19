@@ -18,10 +18,23 @@ import com.opencsv.CSVWriter;
 
 public class ScoreCalculation {
 
+	/**
+	 * Max number of points per data entry during ILS approach.
+	 * 1 pt each for speed, localizer, and glideslope.
+	 */
 	private final static int MAX_PTS_PER_DATA_POINT_ILS = 3;
+	/**
+	 * Max number of points per data entry during Roundout. 
+	 */
 	private final static int MAX_PTS_PER_DATA_POINT_ROUNDOUT = 2; 
+	/**
+	 * Max number of points per data entry during landing.
+	 */
 	private final static int MAX_PTS_PER_DATA_POINT_LANDING = 2;
 
+	/**
+	 * Participant ID used for naming files.
+	 */
 	private String participant;
 
 	// [0] = actual score, [1] = highest possible score
@@ -31,12 +44,6 @@ public class ScoreCalculation {
 	
 	// The data for this particular score
 	private FlightData data;
-		
-	// Files
-	private String stepdownFile;
-	private String finalApproachFile;
-	private String roundoutFile;
-	private String landingFile;
 
 	// Number of lines in data
 	private int numOfData = 0;
@@ -70,6 +77,9 @@ public class ScoreCalculation {
 		STEPDOWN_FIXES = Collections.unmodifiableList(tmp);
 	}
 
+	/**
+	 * Enumerated list denoting types of pilot success scores.
+	 */
 	public enum scoreType {
 		APPROACH,
 		LANDING,
@@ -79,24 +89,15 @@ public class ScoreCalculation {
 	/**
 	 * 
 	 * @param name
-	 * @param sdFile
-	 * @param faFile
-	 * @param rFile
-	 * @param lFile
 	 * @param numData
 	 * @param numSD
 	 * @param numFA
 	 * @param numR
 	 * @param numL
+	 * @param data
 	 */
-	public ScoreCalculation(String name, String sdFile, String faFile, String rFile, String lFile,
-		int numData, int numSD, int numFA, int numR, int numL, FlightData data) {
-
+	public ScoreCalculation(String name, int numData, int numSD, int numFA, int numR, int numL, FlightData data) {
 		this.participant = name;
-		this.stepdownFile = sdFile;
-		this.finalApproachFile = faFile;
-		this.roundoutFile = rFile;
-		this.landingFile = lFile;
 		this.numOfData = numData;
 		this.numOfStepdownData = numSD;
 		this.numOfFinalApproachData = numFA;
@@ -536,21 +537,5 @@ public class ScoreCalculation {
 	 */
 	public void setNumOfRoundoutData(int numOfRoundoutData) {
 		this.numOfRoundoutData = numOfRoundoutData;
-	}
-
-	public String getStepdownFile() {
-		return this.stepdownFile;
-	}
-
-	public String getFinalApproachFile(String filePath) {
-		return this.finalApproachFile;
-	}
-
-	public String getRoundoutFile() {
-		return this.roundoutFile;
-	}
-
-	public String getLandingFile() {
-		return this.landingFile;
 	}
 }
