@@ -96,7 +96,7 @@ public class ScoreRunner {
 		if (flightData.getBeginRoundOutTimestamp() != null)
 			times.add(new Pair<>("roundout", flightData.getBeginRoundOutTimestamp()));
 		if (flightData.getBeginLandingTimestamp() != null)
-			times.add(new Pair<>("landing", flightData.getBeginRoundOutTimestamp()));
+			times.add(new Pair<>("landing", flightData.getBeginLandingTimestamp()));
 		if (flightData.getEndFlightTimestamp() != null)
 			times.add(new Pair<>("end flight", flightData.getEndFlightTimestamp()));
 

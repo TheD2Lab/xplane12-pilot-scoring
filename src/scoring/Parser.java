@@ -139,13 +139,12 @@ public class Parser {
 	public static ScoreCalculation parseOutSections(String filePath, String outputFolderPath, String name) {
 
 		ScoreCalculation score;
-		String stepdownOutputFilePath = outputFolderPath + "//" + name + "_Stepdown_Data.csv";
-		String finalApproachOutputFilePath = outputFolderPath + "//" + name + "_FinalApproach_Data.csv";
-		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_RoundOut_Data.csv";
-		String landingOutputFilePath = outputFolderPath + "//" + name + "_Landing_Data.csv";
+		String stepdownOutputFilePath = outputFolderPath + "//" + name + "_stepdown_data.csv";
+		String finalApproachOutputFilePath = outputFolderPath + "//" + name + "_approach_data.csv";
+		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_roundout_data.csv";
+		String landingOutputFilePath = outputFolderPath + "//" + name + "_landing_data.csv";
 
 		FlightData data;
-		List<Double> sysTimes = new LinkedList<>();
 		// Stepdown portion
 		List<Double> altStepdown = new LinkedList<>();
 		List<Double> dmeStepdown = new LinkedList<>();
