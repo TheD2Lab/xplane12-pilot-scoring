@@ -1,10 +1,5 @@
 package scoring;
-/*
- * How the Scoring Works 
- * For every data point, we will assign 3 possible points (latitude, height, speed)
- * All the measurements will be given the same values: 1 point for latitude, 1 for height, and 1 for speed
- * For every mistake in latitude, height, or speed, the deduction will either be 1/4, 1/2, or 1 point off
- */
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -15,7 +10,14 @@ import java.util.Iterator;
 import java.util.List;
 import com.opencsv.CSVWriter;
 
-
+/**
+ * Handles scoring pilot success and calculating additional measures that may help draw correlations between
+ * pilot performance and their gaze data. The ILS approach can be broken in to the approach (stepdown phase + final approach phase)
+ * and landing (roundout phase and landing phase). <br>
+ * TODO: Complete scoring overview
+ * <u> How scoring works: </u><br>
+ * - For each data entry stepdown phase, there is a maximum of 3 points to earn.
+ */
 public class ScoreCalculation {
 
 	/**
@@ -37,34 +39,105 @@ public class ScoreCalculation {
 	 */
 	private String participant;
 
-	// [0] = actual score, [1] = highest possible score
+	/**
+	 * Approach score received by pilot [0] and highest possible approach score [1].
+	 */
 	private double[] approachScore = {0,1};
+
+	/**
+	 * Landing score received by pilot [0] and highest possible landing score [1].
+	 */
 	private double[] landingScore = {0,1};
+
+	/**
+	 * Overall success score received by pilot [0] and highest possible success score [1].
+	 */
 	private double[] overallScore = {0,1};
 	
-	// The data for this particular score
+	/**
+	 * Flight data used in calculations.
+	 */
 	private FlightData data;
 
-	// Number of lines in data
+	/**
+	 * Number of all data entry lines.
+	 */
 	private int numOfData = 0;
+
+	/**
+	 * Number of data entries during stepdown phase.
+	 */
 	private int numOfStepdownData = 0; 
+
+	/**
+	 * Number of data entries during final approach phase.
+	 */
 	private int numOfFinalApproachData = 0;
+
+	/**
+	 * Number of data entries during roundout phase.
+	 */
 	private int numOfRoundoutData = 0;
+
+	/**
+	 * Number of data entries during landing phase.
+	 */
 	private int numOfLandingData = 0;
 	
-	// Additional X-Plane measures
-	private double averageILSSpeed = 0; // Includes stepdown portion and final approach portion
+	/**
+	 * Combined average speed during stepdown and final approach phase.
+	 */
+	private double averageILSSpeed = 0;
+
+	/**
+	 * Accumulator for speed during stepdown and final approach phase.
+	 */
 	private double speedAddedTotal = 0;
+
+	/**
+	 * Average vertical speed during final approach phase.
+	 */
 	private double averageILSVerticalSpeed = 0; // Does not include stepdown portion
+
+	/**
+	 * Accumulator for vertical speed during final approach phase.
+	 */
 	private double verticalSpeedAddedTotal = 0;
+
+	/**
+	 * Combined average localizer (horizontal) deflection during stepdown and final approach phase.
+	 */
 	private double averageLocalizerDeflection = 0; // Includes stepdown portion and final approach portion
+
+	/**
+	 * Accumulator for localizer (horizontal deflection during stepdown and final approach phase.
+	 */
 	private double localizerAddedTotal = 0;
+
+	/**
+	 * Average glideslope (vertical) deflection during final approach phase.
+	 */
 	private double averageGlideslopeDeflection = 0; // Does not include stepdown portion
+
+	/** Accumulator for glideslope (vertical) deflection during final approach phase */
 	private double glideslopeAddedTotal = 0;
+
+	/**
+	 * Combined average bank angle for stepdown and final approach phase.
+	 */
 	private double averageBankAngle = 0; // Includes stepdown portion and final approach portion
+
+	/** Accumulator for bank angle for stepdown and final approach phase */
 	private double bankAngleAddedTotal = 0;
+
+	/**
+	 * Maximum bank angle that occurred throughout the stepdown, final approach, and roundout phase.
+	 */
 	private double maxBankAngle = 0; // Includes ILS and final descent to runway
 
+	/**
+	 * List of important fixes during stepdown sequence. Can be found on approach plate.
+	 */
 	private final static List<Fix> STEPDOWN_FIXES;
 	static {
 		List<Fix> tmp = new ArrayList<>();
@@ -77,24 +150,25 @@ public class ScoreCalculation {
 		STEPDOWN_FIXES = Collections.unmodifiableList(tmp);
 	}
 
-	/**
-	 * Enumerated list denoting types of pilot success scores.
-	 */
+	/** Enumerated list denoting types of pilot success scores. */
 	public enum scoreType {
+		/** Approach portion (stepdown + final approach phases) */
 		APPROACH,
+		/** Landing portion (roundout + landing phases) */
 		LANDING,
+		/** Flight from JIPOX to end of landing phase */
 		OVERALL
 	}
 	
 	/**
-	 * 
-	 * @param name
-	 * @param numData
-	 * @param numSD
-	 * @param numFA
-	 * @param numR
-	 * @param numL
-	 * @param data
+	 * Constructs and adds flight data to calculations. Pre-sets max number of points that can be scored.
+	 * @param name 		participant name or identifier.
+	 * @param numData		total number of data entries.
+	 * @param numSD		number of data entries during stepdown phase.
+	 * @param numFA		number of data entries during final approach phase.
+	 * @param numR			number of data entries during roundout phase.
+	 * @param numL			number of data entries during landing phase.
+	 * @param data			flight data to score.
 	 */
 	public ScoreCalculation(String name, int numData, int numSD, int numFA, int numR, int numL, FlightData data) {
 		this.participant = name;
@@ -109,7 +183,8 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * Calculates the max points for the overall score and sub-scores.
+	 * Calculates the max points for the overall score and sub-scores. Uses the number
+	 * of entries and max number of points possible for each type of entry to calculate max possible points.
 	 */
 	private void setMaxPoints() {
 		// set approach score to max possible points
@@ -127,9 +202,10 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total score penalty for the localizer portion of the ILS approach
-	 * @param horizontalDef is all of the localizer position of the aircraft in dots
-	 * @return double Returns the total penalty
+	 * Returns the total score penalty for the localizer portion of the ILS approach.
+	 * TODO: add how scoring works
+	 * @param horizontalDef all of the localizer position of the aircraft in dots.
+	 * @return the total penalty
 	 */
 	private double localizerScorePenalty(List<Double> horizontalDef, List<Double> bankAngle) {
 		double penalty = 0;
@@ -176,9 +252,10 @@ public class ScoreCalculation {
 	}
 	
 	/**
-	 * returns the total score penalty for the localizer in the landing portion
-	 * @param horizontalDef is all of the localizer position of the aircraft in dots
-	 * @return double Returns the total penalty
+	 * Returns the total score penalty for the localizer in the landing portion.
+	 * TODO: Add how scoring works
+	 * @param horizontalDef all of the localizer position of the aircraft in dots
+	 * @return the total penalty
 	 */
 	private double localizerScorePenaltyLanding(List<Double> horizontalDef) {
 		double penalty = 0;
@@ -201,9 +278,10 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total score penalty for the glideslope portion of the ILS approach
-	 * @param verticalDef is all of the vertical position of the aircraft in dots
-	 * @return double Returns the total penalty
+	 * Returns the total score penalty for the glideslope portion of the ILS approach.
+	 * TODO: add how scoring works
+	 * @param verticalDef all of the vertical position of the aircraft in dots
+	 * @return the total penalty
 	 */
 	private double glideSlopeScorePenalty(List<Double> verticalDef, List<Double> verticalSpeed) {
 		double penalty = 0;
@@ -239,9 +317,12 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total altitude penalty for the stepdown portion of the ILS approach
-	 * @param altitude the altitude of the aircraft during the ILS approach
-	 * @return
+	 * Returns the total altitude penalty for the stepdown portion of the ILS approach. 
+	 * TODO: add how scoring works
+	 * @param dmes list of DME distance in nautical miles
+	 * @param altitudes list of altitude MSL in feet
+	 * @param verticalSpeed	list of vertical speed in feet per second
+	 * @return the total penalty
 	 */
 	private double altitudeILSCalcPenalty(List<Double> dmes, List<Double>altitudes, List<Double> verticalSpeed) {
 		double penalty = 0;
@@ -290,9 +371,10 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total speed penalty for the speed portion of the ILS approach
-	 * @param speed The speed of the aircraft during the ILS approach
-	 * @return double Returns the total penalty
+	 * Returns the total speed penalty for the speed portion of the ILS approach.
+	 * TODO: add how scoring works
+	 * @param speeds list of airspeed data in knot
+	 * @return the total penalty
 	 */
 	private double speedILSCalcPenalty(List<Double> speeds) {
 		double penalty = 0;
@@ -313,13 +395,24 @@ public class ScoreCalculation {
 		return penalty;
 	}
 
+	/**
+	 * Returns the total penalty for the stepdown phase.
+	 * TODO: add how scoring works
+	 * @param horiDef		list of horizontal deflection data
+	 * @param speed		list of airspeed data in knots
+	 * @param altitude 	list of altitude MSL data in feet
+	 * @param dme			list of DME distance in nautical miles
+	 * @param rollBank 	list of roll (bank) angles in degrees
+	 * @param verticalSpeed	list of vertical speed in feet per seconds
+	 * @return the total penalty
+	 */
 	public double scoreStepdownCalc(List<Double> horiDef, List<Double> speed, List<Double> altitude, List<Double> dme,
 			List<Double> rollBank, List<Double> verticalSpeed) {
 		return localizerScorePenalty(horiDef, rollBank) + speedILSCalcPenalty(speed) + altitudeILSCalcPenalty(dme, altitude, verticalSpeed);
 	}
 
 	/**
-	 * returns the total penalty for the final approach. Based on the localizer, glideslope, and speed
+	 * returns the total penalty for the final approach phase. Based on the localizer, glideslope, and speed
 	 * @param horiDef all of the localizer position of the aircraft
 	 * @param speed The speed of the aircraft during the ILS approach
 	 * @param vertDef all of the glideslope position of the aircraft
@@ -331,9 +424,12 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total penalty for the roundout phase. Based on altitude. Looking to see that the plane is continuously descending
-	 * @param altitude contains all the altitude information for the aircraft
-	 * @return double Returns the total Penalty
+	 * Returns the total penalty for the roundout phase. 
+	 * TODO: add how scoring works
+	 * @param horiDef list of horizontal deflection data in dots
+	 * @param rollBank	list of bank angles data in degrees
+	 * @param verticalSpeed	list of vertical speed in feet per seconds
+	 * @return the total penalty.
 	 */
 	public double scoreRoundOut(List<Double> horiDef, List<Double> rollBank, List<Double> verticalSpeed)
 	{
@@ -358,9 +454,9 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total penalty for the landing Phase. Based on centerline and altitude
-	 * @param altitude contains all the altitude information for the aircraft
-	 * @return double Returns the total Penalty
+	 * Returns the total penalty for the landing Phase. Based on centerline.
+	 * @param horiDef list of horizontal deflection data during landing phase.
+	 * @return the total penalty
 	 */
 	public double scoreLanding(List<Double> horiDef)
 	{
@@ -370,9 +466,7 @@ public class ScoreCalculation {
 	}
 
 	/**
-	 * returns the total penalty for the approach and landing
-	 * @param outputFolderPath directory to save output files
-	 * @param name name of participant
+	 * Runs the pilot success score calculations and updates object state.
 	 */
 	public void scoreCalc() {
 
@@ -406,8 +500,11 @@ public class ScoreCalculation {
 		this.overallScore[0] = this.landingScore[0] + this.approachScore[0];
 	}
 	
-	// Below are housekeeping items
-
+	
+	/**
+	 * Writes the scores and addition measures to a file/
+	 * @param outputLocation path to output file.
+	 */
 	public void writeToFile(String outputLocation) {
 		String outputFile = outputLocation + "/" + this.participant + "_score.csv";
 		String[] headers = {
@@ -427,11 +524,11 @@ public class ScoreCalculation {
 			String.valueOf(String.valueOf(averageILSSpeed)),
 			"",
 			String.valueOf(getPercentageScore(scoreType.OVERALL)),
-			String.valueOf(this.data.getTimeTotal()),
+			String.valueOf(this.data.getDurTotal()),
 			String.valueOf(getPercentageScore(scoreType.APPROACH)),
-			String.valueOf(this.data.getTimeApproach()),
+			String.valueOf(this.data.getDurApproach()),
 			String.valueOf(getPercentageScore(scoreType.LANDING)),
-			String.valueOf(this.data.getTimeLanding())
+			String.valueOf(this.data.getDurLanding())
 		};
 
 		try (
@@ -454,8 +551,13 @@ public class ScoreCalculation {
 		}
 	}
 
-	public double getPercentageScore(scoreType val) {
-		switch(val) {
+	/**
+	 * Returns the specified pilot success score as a percentage.
+	 * @param type the wanted score type
+	 * @return	the percentage score
+	 */
+	public double getPercentageScore(scoreType type) {
+		switch(type) {
 			case APPROACH:
 				return this.approachScore[0] / this.approachScore[1];
 			case LANDING:
@@ -467,75 +569,60 @@ public class ScoreCalculation {
 		}
 	}
 
+
+	/**
+	 * Returns the participant identifier.
+	 * @return participant identifier
+	 */
 	public String getParticipant() {
 		return this.participant;
 	}
 
+	/**
+	 * Return the flight data associated with calculation.
+	 * @return flight data
+	 */
 	public FlightData getFlightData() {
 		return data;
 	}
 
 	/**
-	 * @return the numOfData
+	 * Returns the total number of data entries.
+	 * @return number of data entries
 	 */
 	public int getNumOfData() {
 		return this.numOfData;
 	}
 
 	/**
-	 * @param numOfData the numOfData to set
+	 * Returns the number of data entries during the stepdown phase.
+	 * @return number of data entries
 	 */
-	public void setNumOfData(int numOfData) {
-		this.numOfData = numOfData;
-	}
-
-	public void setNumOfStepDownData(int numOfStepdownData) {
-		this.numOfStepdownData = numOfStepdownData;
-	}
-
 	public int getNumOfStepDownData() {
 		return this.numOfStepdownData;
 	}
 
 	/**
-	 * @return the numOfILSData
+	 * Returns the number of data entries during final approach.
+	 * @return number of data entries
 	 */
 	public int getNumOfFinalApproachData() {
 		return this.numOfFinalApproachData;
 	}
 
 	/**
-	 * @param numOfILSData the numOfILSData to set
-	 */
-	public void setNumOfFinalApproachData(int numOfILSData) {
-		this.numOfFinalApproachData = numOfILSData;
-	}
-
-	/**
-	 * @return the numOfLandingData
+	 * Returns the number of data entries during landing phase.
+	 * @return number of data entries
 	 */
 	public int getNumOfLandingData() {
 		return this.numOfLandingData;
 	}
 
 	/**
-	 * @param numOfLandingData the numOfLandingData to set
-	 */
-	public void setNumOfLandingData(int numOfLandingData) {
-		this.numOfLandingData = numOfLandingData;
-	}
-
-	/**
-	 * @return the numOfRoundoutData
+	 * Returns the number of data entries during roundout phase.
+	 * @return number of data entries
 	 */
 	public int getNumOfRoundoutData() {
 		return this.numOfRoundoutData;
-	}
-
-	/**
-	 * @param numOfRoundoutData the numOfRoundoutData to set
-	 */
-	public void setNumOfRoundoutData(int numOfRoundoutData) {
-		this.numOfRoundoutData = numOfRoundoutData;
 	}
 }
