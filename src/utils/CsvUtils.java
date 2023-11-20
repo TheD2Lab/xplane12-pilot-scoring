@@ -17,7 +17,7 @@ import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvValidationException;
 
 /**
- * Utility methods for manipulating CSV files
+ * Utility methods for manipulating CSV files.
  */
 public class CsvUtils {
 
@@ -50,6 +50,9 @@ public class CsvUtils {
      * Combines a list of csv files with identical header into one csv file.
      * @param outputFile    Path to csv file to write to
      * @param filesToMerge  List of csv files to merge
+     * @throws CsvValidationException
+     * @throws IOException
+     * @throws FileMergeException
      */
     public static void mergeCsvFile(String outputFile, List<String> filesToMerge) throws CsvValidationException, IOException, FileMergeException {
         String[] headers = null;

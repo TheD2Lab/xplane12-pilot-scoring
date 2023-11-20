@@ -24,8 +24,8 @@ public class GazeTrimmer {
 	/**
 	 * Trims gaze csv files into windows associated with different parts the simulation. Timestamps are the start times of each window.
 	 * Windows end at the start of the following timestamp. Make sure to include an ending timestamp for the last window to trimmed, otherwise 
-	 * the window will not be created. If you are unsure of the end, use LocalDateTime.now() assuming all other timestamps occurred before
-	 * running the timeGazeFile.
+	 * the window will not be created. If you are unsure of the end, use 'Pair<"End", LocalDateTime.now()>' assuming all other timestamps occurred before
+	 * calling the timeGazeFile method.
 	 * @param inputFile		CSV file to be trimmed or cut into windows.
 	 * @param outputFolder	Directory to save new csv files.
 	 * @param timestamps		List of labels and timestamps of important parts of the simulation.

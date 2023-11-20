@@ -7,13 +7,19 @@ package scoring;
  * altitude pilots must fly above that decreases at each fix closer to the runway. 
  */
 public class Fix {
+   /**
+    * Distance from the runway in nautical miles.
+    */
    public double dme;
+   /**
+    * Minimum stepdown MSL altitude in feet immediately before the fix.
+    */
    public int altitude;
 
    /**
     * Constructs a new Fix and sets the DME and altitude.
     * @param dme DME distance in nautical miles.
-    * @param altitude MSL altitude in feet immediately before fix.
+    * @param altitude Minimum stepdown MSL altitude in feet immediately before the fix.
     */
    Fix(double dme, int altitude) {
       this.dme = dme;
