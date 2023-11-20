@@ -9,6 +9,9 @@ import org.apache.commons.lang3.Pair;
 import utils.GazeTrimmer;
 import java.time.LocalDateTime;
 
+/**
+ * Includes main and runs the pilot success scoring and gaze trimming programs.
+ */
 public class ScoreRunner {
 
 	//Changes in the Airport: All you would need to do is change the field elevation and the minimums as shown in the approach chart\
@@ -17,9 +20,11 @@ public class ScoreRunner {
 	//you would only need to change the  MAX_PTS_PER_DATA_POINT_ILS, MAX_PTS_PER_DATA_POINT_ROUNDOUT,  MAX_PTS_PER_DATA_POINT_LANDING
 
 	/**
-	 * entry point of scoring calculation program
-	 * @param args[0] xplane data file path
-	 * @param args[1] output directory path
+	 * Entry point of pilot success scoring calculation program.
+	 * @param args[0] participant name or identifier.
+	 * @param args[1] xplane data file path.
+	 * @param args[2] output directory path.
+	 * @param args[3..n] gaze files to trim.
 	 */
 	public static void main(String[] args) {
 		
@@ -27,9 +32,9 @@ public class ScoreRunner {
 		String outputFolderPath;
 		
 		// Initialize paths
-		if (args.length >= 2) {
-			xplaneFilePath = args[0];
-			outputFolderPath = args[1];
+		if (args.length >= 3) {
+			xplaneFilePath = args[1];
+			outputFolderPath = args[0];
 		}
 		else {
 			System.out.println("Text file or output directory not specified.");
@@ -47,7 +52,7 @@ public class ScoreRunner {
 		}
 
 		// Get name to append to directory and files
-		String name = FileNameUtils.getBaseName(xplaneFilePath);
+		String name = args[1];
 		String xplaneExtension = FileNameUtils.getExtension(xplaneFilePath);
 		String scoringOutputFolder = outputFolderPath + "/" + name + "_scoring";
 		String trimOutputFolder = outputFolderPath+ "/" + name + "_trim";
@@ -67,7 +72,7 @@ public class ScoreRunner {
 		}
 
 		// generate pilot success score and other metrics
-		ScoreCalculation score = Parser.parseFlightData(xplaneFilePath, scoringOutputFolder, name);
+		ScoreCalculation score = Parser.parseFlightData(xplaneFilePath, name);
 		score.writeToFile(scoringOutputFolder);
 		System.out.println("Done scoring...");
 
@@ -76,16 +81,21 @@ public class ScoreRunner {
 		if (flightData.getBeginFlightTimestamp() == null) {
 			System.out.println("Did not find system timestamps...");
 			return;
-		} else if (args.length < 3){
+		} else if (args.length < 4){
 			System.out.println("No files to trim...");
 			return;
 		}
 
-		runTrim(flightData, trimOutputFolder, Arrays.copyOfRange(args, 2, args.length));
+		runTrim(flightData, trimOutputFolder, Arrays.copyOfRange(args, 3, args.length));
 	}
 		
 
-
+	/**
+	 * Runs the gaze data file trimming code.
+	 * @param flightData data already parsed and analyzed by scoring procedure.
+	 * @param outputFolder directory path to save new files.
+	 * @param gazeFiles files to be trimmed.
+	 */
 	private static void runTrim(FlightData flightData, String outputFolder, String[] gazeFiles) {
 
 		List<Pair<String, LocalDateTime>> times = new LinkedList<>();

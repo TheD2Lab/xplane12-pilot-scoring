@@ -11,21 +11,34 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvValidationException;
 
+/**
+ * Tools to parse flight data files to prepare for scoring process. 
+ */
 public class Parser {
 
-	// For ILS 34R KSEA. Change for different airport
+	/**
+	 * Minimum altitude MSL for the approach in feet.
+	 */
 	private static int minimumsAltitude = 572;
+	/**
+	 * Distance of the initial approach fix (JIPOX) from the runway in nautical miles.
+	 */
 	private static double initialAppFixDME = 22.2;
+	/**
+	 * Distance of the final approach fix from the runway in nautical miles.
+	 */
 	private static double intersectionDME = 6.3;
+	/**
+	 * Formatter for parsing system time.
+	 */
 	private static DateTimeFormatter sysTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd kk:mm:ss");
 	
 	/**
-	 * parses out only the useful/needed data into a different csv file
+	 * Parses out only the useful/needed data into a different csv file.
 	 * @param filePath file to be parsed
 	 * @param outputFolderPath directory to save output files
 	 * @param name name of the participant
@@ -90,7 +103,7 @@ public class Parser {
 	}
 
 	/**
-	 * Changes a txt file into a csv file
+	 * Changes a txt file into a csv file.
 	 * @param filePath txt file to be converted
 	 * @param outputFolderPath directory to save csv file
 	 * @param name name of participant
@@ -131,12 +144,16 @@ public class Parser {
 	}
 
 	/**
-	 * Parses out the phases of the flight and returns a ScoreCalculations object.
-	 * @param filePath csv file to be parsed
-	 * @param outputFolderPath directory to save output files
-	 * @param name name of the participant
+	 * Parses out the phases of the flight and creates a ScoreCalculations object. Data entries prior to the initial approach
+	 * fix (JIPOX) are discarded. Data entries between JIPOX and before final approach fix are included in the stepdown phase. Data
+	 * entries at or after the final approach fix and above the minimum approach altitude are included in the final approach phase. Data entries at
+	 * or below the minimum approach altitude and with non-positive ground roll value are included in the Roundout phase. Data entries with
+	 * positive ground roll values are included in the landing phase. These phases/categories do not overlap.
+	 * @param filePath path to flight data csv file.
+	 * @param name Participant name or identifier.
+	 * @return pilot success score as a ScoreCalculation object.
 	 */
-	public static ScoreCalculation parseFlightData(String filePath, String outputFolderPath, String name) {
+	public static ScoreCalculation parseFlightData(String filePath, String name) {
 
 		ScoreCalculation score;
 
@@ -389,16 +406,10 @@ public class Parser {
 	}
 	
 	/**
-	 * @return the minimumsAltitude
+	 * Returns the minimum altitude MSL to complete the approach or go around in feet.
+	 * @return minimum altitude
 	 */
 	public static int getMinimumsAltitude() {
 		return minimumsAltitude;
 	}
-	/**
-	 * @param minimumsAltitude the minimumsAltitude to set
-	 */
-	public static void setMinimumsAltitude(int minimumsAltitude) {
-		Parser.minimumsAltitude = minimumsAltitude;
-	}
-
 }
