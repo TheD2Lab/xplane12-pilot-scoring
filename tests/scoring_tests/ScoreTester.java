@@ -1,4 +1,4 @@
-package tests.scoring_tests;
+package scoring_tests;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -19,7 +19,7 @@ public class ScoreTester {
 	private static String name = "Test";
 	public static void main(String[] args) {
 		Path currentRelativePath = Paths.get("");
-		String currentPath = currentRelativePath.toAbsolutePath().toString() + "/src/tests/scoring_tests/";
+		String currentPath = currentRelativePath.toAbsolutePath().toString() + "/tests/scoring_tests/";
 		inputFile = currentPath + "XPLaneTest.csv";
 		outputFolder = currentPath + "output/";
 		new File(outputFolder).mkdirs();
