@@ -166,8 +166,9 @@ public class Parser {
 		// Landing portion
 		List<Double> altLanding = new LinkedList<>();
 		List<Double> hDefLanding = new LinkedList<>();
-		String timeApproachStr = "";
-		String timeTotalStr = "";
+		String timeApproachStartStr = null;
+		String timeApproachEndStr = null;
+		String timeTotalStr = null;
 		double timeApproach = 0;
 		double timeLanding = 0;
 		double timeTotal = 0;
@@ -269,6 +270,7 @@ public class Parser {
 					if (sysTimesIndex != -1 && beginFlightTimestamp == null) {
 						beginFlightTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
 					}
+					timeApproachStartStr = row[timeIndex];
 					continue;
 				
 				// ILS Stepdown portion
@@ -293,7 +295,7 @@ public class Parser {
 					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
 					verticalSpeedFinalApp.add(Double.valueOf(row[verticalSpeedIndex]));
 					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
-					timeApproachStr = row[timeIndex];
+					timeApproachEndStr = row[timeIndex];
 					rollBankFinalApp.add(Double.valueOf(row[rollBankAngleIndex]));
 
 				// Roundout portion: From minimums, descent to the runway portion
@@ -335,9 +337,27 @@ public class Parser {
 			System.out.println(e);
 		}
 
-		timeApproach = Double.valueOf(timeApproachStr);
 		timeTotal = Double.valueOf(timeTotalStr);
-		timeLanding = timeTotal - timeApproach;
+
+		if (timeApproachStartStr != null) {
+			 double timeApproachStart = Double.valueOf(timeApproachStartStr);
+			if (timeApproachEndStr != null) {
+				// pilot completed the approach. 
+				// Time elapsed during approach = [approach end time] - [approach start time]
+				double timeApproachEnd = Double.valueOf(timeApproachEndStr);
+				timeApproach = timeApproachEnd - timeApproachStart;
+				timeLanding = timeTotal - timeApproachEnd;
+			} else {
+				// pilot crashed before completing approach. 
+				// Time elapsed during approach = [total flight time] - [approach start time]
+				timeApproach = timeTotal - Double.valueOf(timeApproachStartStr);
+				timeLanding = 0;
+			}
+		} else {
+			// pilot crashed before Initial Approach Fix.
+			timeApproach = 0;
+			timeLanding = 0;
+		}
 
 		// construct flight data object to pass to scorer
 		if (sysTimesIndex == -1) {
