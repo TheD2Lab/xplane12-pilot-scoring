@@ -65,12 +65,7 @@ def run_multiple(output_dir: str, data_dir: str):
    for p_dir in pilot_dirs:
       if p_dir == "Questionnaires":
          continue
-      name = os.path.basename(os.path.dirname(p_dir))
-      output_p_dir = os.path.join(output_dir, name)
-      if not os.path.exists(output_p_dir):
-         os.makedirs(output_p_dir)
-      print(f"Running {name}'s data...", end=" ")
-      run_single(output_p_dir, p_dir)
+      run_single(output_dir, p_dir)
 
    print()
 
