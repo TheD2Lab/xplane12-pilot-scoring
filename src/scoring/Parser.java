@@ -68,13 +68,23 @@ public class Parser {
 				}
 			}
 			String[] row;
+			int lineNum = 0;
 			while ((row = csvReader.readNext()) != null) {
 				String[] selectedRow = new String[columnIndex.length];
-				for (int i = 0; i < columnIndex.length; i++) 
-				{
-					selectedRow[i] = row[columnIndex[i]];
+				lineNum++;
+
+				processRow: {	// label used to break 
+					for (int i = 0; i < columnIndex.length; i++) 
+					{
+						if (columnIndex[i] >= row.length) {
+							System.out.printf("%s: Removed data line number %d\n", name, lineNum);
+							break processRow;
+						}
+						selectedRow[i] = row[columnIndex[i]];
+					}
+					selectedColumns.add(selectedRow);
 				}
-				selectedColumns.add(selectedRow);
+
 			}
 			outputCSVWriter.writeNext(columnNames.toArray(new String[0])); // write the header row
 			outputCSVWriter.writeAll(selectedColumns); // write the selected columns
