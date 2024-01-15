@@ -73,7 +73,7 @@ public class Parser {
 				String[] selectedRow = new String[columnIndex.length];
 				lineNum++;
 
-				processRow: {	// label used to break 
+				processRow: {	// label used to mimic for-else loop without boolean flags
 					for (int i = 0; i < columnIndex.length; i++) 
 					{
 						if (columnIndex[i] >= row.length) {

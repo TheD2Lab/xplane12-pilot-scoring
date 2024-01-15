@@ -18,18 +18,18 @@ public class ScoreRunner {
 
 	/**
 	 * entry point of scoring calculation program
-	 * @param args[0] xplane data file path
 	 * @param args[1] output directory path
+	 * @param args[1] xplane data file path
 	 */
 	public static void main(String[] args) {
-		
-		String xplaneFilePath;
+
 		String outputFolderPath;
-		
+		String xplaneFilePath;
+
 		// Initialize paths
 		if (args.length >= 2) {
-			xplaneFilePath = args[0];
-			outputFolderPath = args[1];
+			outputFolderPath = args[0];
+			xplaneFilePath = args[1];
 		}
 		else {
 			System.out.println("Text file or output directory not specified.");
@@ -42,7 +42,7 @@ public class ScoreRunner {
 			return;
 		}
 		else if (!new File(outputFolderPath).isDirectory()) {
-			System.out.println("Output directory path does not exits.");
+			System.out.printf("Output directory path %s does not exits.");
 			return;
 		}
 
