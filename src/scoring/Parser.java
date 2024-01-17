@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -22,7 +23,10 @@ public class Parser {
 	private static int minimumsAltitude = 572;
 	private static double initialAppFixDME = 22.2;
 	private static double intersectionDME = 6.3;
-	private static DateTimeFormatter sysTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd kk:mm:ss");
+	private static DateTimeFormatter[] sysTimeFormat = {
+		DateTimeFormatter.ofPattern("yyyy-MM-dd kk:mm:ss"),
+		DateTimeFormatter.ofPattern("MM/dd/yy kk:mm")
+	};
 	
 	/**
 	 * parses out only the useful/needed data into a different csv file
@@ -279,7 +283,7 @@ public class Parser {
 				// Do not start scoring until after participant reaches Initial Approach Fix - JIPOX
 				if (Double.valueOf(row[dmeIndex]) > initialAppFixDME) {
 					if (sysTimesIndex != -1 && beginFlightTimestamp == null) {
-						beginFlightTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginFlightTimestamp = parseTime(row[sysTimesIndex]);
 					}
 					timeApproachStartStr = row[timeIndex];
 					continue;
@@ -295,7 +299,7 @@ public class Parser {
 					rollBankStepdown.add(Double.valueOf(row[rollBankAngleIndex]));
 					verticalSpeedStepdown.add(Double.valueOf(row[verticalSpeedIndex]));
 					if (sysTimesIndex != -1 && beginApproachTimestamp == null) {
-						beginApproachTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginApproachTimestamp = parseTime(row[sysTimesIndex]);
 					} 
 
 				// ILS Final Approach portion
@@ -318,7 +322,7 @@ public class Parser {
 					rollBankRoundout.add(Double.valueOf(row[rollBankAngleIndex]));
 					verticalSpeedRoundout.add(Double.valueOf(row[verticalSpeedIndex]));
 					if (sysTimesIndex != -1 && beginRoundOutTimestamp == null) {
-						beginRoundOutTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginRoundOutTimestamp = parseTime(row[sysTimesIndex]);
 					} 
 					
 				// Wheels touch the ground portion
@@ -328,7 +332,7 @@ public class Parser {
 					altLanding.add(Double.valueOf(row[altitudeIndex]));
 					hDefLanding.add(Double.valueOf(row[hdefIndex]));
 					if (sysTimesIndex != -1 && beginLandingTimestamp == null) {
-						beginLandingTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginLandingTimestamp = parseTime(row[sysTimesIndex]);
 					} 
 				}
 
@@ -339,7 +343,7 @@ public class Parser {
 				}
 			}
 			if (endFlightTimeString != null) {
-				endFlightTimestamp = LocalDateTime.parse(endFlightTimeString, sysTimeFormat);
+				endFlightTimestamp = parseTime(endFlightTimeString);
 			}
 		}
 		catch(Exception e)
@@ -441,6 +445,19 @@ public class Parser {
 		
 		return score;
 
+	}
+
+	public static LocalDateTime parseTime(String timeString) {
+		LocalDateTime time = null;
+		for (DateTimeFormatter format : sysTimeFormat) {
+			try {
+				time = LocalDateTime.parse(timeString, format);
+				break;
+			} catch (DateTimeParseException e) {
+				// keep looping
+			}
+		}
+		return time;
 	}
 	
 	/**

@@ -43,21 +43,26 @@ def run_single(output_dir: str, pilot_dir: str):
       "./libs/common-lang3.jar:./libs/opencsv-5.7.0.jar:./libs/weka.jar:./src",
       "scoring/ScoreRunner"
    ]
-   csv_files: list[str] = glob(f"{pilot_dir}/*.csv")
-   datarefs_index: int = -1
+   data_files: list[str] = glob(f"{pilot_dir}/*.csv")
+   flight_data_index: int = -1
 
-   for i, file in enumerate(csv_files):
+   for i, file in enumerate(data_files):
       if re.search(regex, file):
-         datarefs_index = i
+         flight_data_index = i
          break
 
-   # no flight data found
-   if datarefs_index == -1:
+   # no datarefs file, find xplane.txt file
+   if flight_data_index == -1:
+      data_files += glob(f"{pilot_dir}/*xplane.txt")
+      flight_data_index = len(data_files) - 1
+   
+   # no flight data
+   if flight_data_index == -1:
       return
    
    # put flight data file in front of list
-   csv_files[0], csv_files[datarefs_index] = csv_files[datarefs_index], csv_files[0]
-   java_program += [output_dir] + csv_files
+   data_files[0], data_files[flight_data_index] = data_files[flight_data_index], data_files[0]
+   java_program += [output_dir] + data_files
    subprocess.run(java_program)
 
 def run_multiple(output_dir: str, data_dir: str):
