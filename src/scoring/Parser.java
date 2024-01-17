@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -22,7 +23,10 @@ public class Parser {
 	private static int minimumsAltitude = 572;
 	private static double initialAppFixDME = 22.2;
 	private static double intersectionDME = 6.3;
-	private static DateTimeFormatter sysTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd kk:mm:ss");
+	private static DateTimeFormatter[] sysTimeFormat = {
+		DateTimeFormatter.ofPattern("yyyy-MM-dd kk:mm:ss"),
+		DateTimeFormatter.ofPattern("MM/dd/yy kk:mm")
+	};
 	
 	/**
 	 * parses out only the useful/needed data into a different csv file
@@ -68,13 +72,23 @@ public class Parser {
 				}
 			}
 			String[] row;
+			int lineNum = 0;
 			while ((row = csvReader.readNext()) != null) {
 				String[] selectedRow = new String[columnIndex.length];
-				for (int i = 0; i < columnIndex.length; i++) 
-				{
-					selectedRow[i] = row[columnIndex[i]];
+				lineNum++;
+
+				processRow: {	// label used to mimic for-else loop without boolean flags
+					for (int i = 0; i < columnIndex.length; i++) 
+					{
+						if (columnIndex[i] >= row.length) {
+							System.out.printf("%s: Removed data line number %d\n", name, lineNum);
+							break processRow;
+						}
+						selectedRow[i] = row[columnIndex[i]];
+					}
+					selectedColumns.add(selectedRow);
 				}
-				selectedColumns.add(selectedRow);
+
 			}
 			outputCSVWriter.writeNext(columnNames.toArray(new String[0])); // write the header row
 			outputCSVWriter.writeAll(selectedColumns); // write the selected columns
@@ -139,10 +153,11 @@ public class Parser {
 	public static ScoreCalculation parseOutSections(String filePath, String outputFolderPath, String name) {
 
 		ScoreCalculation score;
-		String stepdownOutputFilePath = outputFolderPath + "//" + name + "_stepdown_data.csv";
-		String finalApproachOutputFilePath = outputFolderPath + "//" + name + "_approach_data.csv";
-		String roundOutOutputFilePath = outputFolderPath + "//" + name + "_roundout_data.csv";
-		String landingOutputFilePath = outputFolderPath + "//" + name + "_landing_data.csv";
+		String basePathName = outputFolderPath + "//" + name + "_flight_data";
+		String stepdownOutputFilePath = basePathName + "_stepdown.csv";
+		String finalApproachOutputFilePath = basePathName + "_approach.csv";
+		String roundOutOutputFilePath = basePathName + "_roundout.csv";
+		String landingOutputFilePath = basePathName+ "_landing.csv";
 
 		FlightData data;
 		// Stepdown portion
@@ -166,8 +181,9 @@ public class Parser {
 		// Landing portion
 		List<Double> altLanding = new LinkedList<>();
 		List<Double> hDefLanding = new LinkedList<>();
-		String timeApproachStr = "";
-		String timeTotalStr = "";
+		String timeApproachStartStr = null;
+		String timeApproachEndStr = null;
+		String timeTotalStr = null;
 		double timeApproach = 0;
 		double timeLanding = 0;
 		double timeTotal = 0;
@@ -267,8 +283,9 @@ public class Parser {
 				// Do not start scoring until after participant reaches Initial Approach Fix - JIPOX
 				if (Double.valueOf(row[dmeIndex]) > initialAppFixDME) {
 					if (sysTimesIndex != -1 && beginFlightTimestamp == null) {
-						beginFlightTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginFlightTimestamp = parseTime(row[sysTimesIndex]);
 					}
+					timeApproachStartStr = row[timeIndex];
 					continue;
 				
 				// ILS Stepdown portion
@@ -282,7 +299,7 @@ public class Parser {
 					rollBankStepdown.add(Double.valueOf(row[rollBankAngleIndex]));
 					verticalSpeedStepdown.add(Double.valueOf(row[verticalSpeedIndex]));
 					if (sysTimesIndex != -1 && beginApproachTimestamp == null) {
-						beginApproachTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginApproachTimestamp = parseTime(row[sysTimesIndex]);
 					} 
 
 				// ILS Final Approach portion
@@ -293,7 +310,7 @@ public class Parser {
 					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
 					verticalSpeedFinalApp.add(Double.valueOf(row[verticalSpeedIndex]));
 					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
-					timeApproachStr = row[timeIndex];
+					timeApproachEndStr = row[timeIndex];
 					rollBankFinalApp.add(Double.valueOf(row[rollBankAngleIndex]));
 
 				// Roundout portion: From minimums, descent to the runway portion
@@ -305,7 +322,7 @@ public class Parser {
 					rollBankRoundout.add(Double.valueOf(row[rollBankAngleIndex]));
 					verticalSpeedRoundout.add(Double.valueOf(row[verticalSpeedIndex]));
 					if (sysTimesIndex != -1 && beginRoundOutTimestamp == null) {
-						beginRoundOutTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginRoundOutTimestamp = parseTime(row[sysTimesIndex]);
 					} 
 					
 				// Wheels touch the ground portion
@@ -315,7 +332,7 @@ public class Parser {
 					altLanding.add(Double.valueOf(row[altitudeIndex]));
 					hDefLanding.add(Double.valueOf(row[hdefIndex]));
 					if (sysTimesIndex != -1 && beginLandingTimestamp == null) {
-						beginLandingTimestamp = LocalDateTime.parse(row[sysTimesIndex], sysTimeFormat);
+						beginLandingTimestamp = parseTime(row[sysTimesIndex]);
 					} 
 				}
 
@@ -326,7 +343,7 @@ public class Parser {
 				}
 			}
 			if (endFlightTimeString != null) {
-				endFlightTimestamp = LocalDateTime.parse(endFlightTimeString, sysTimeFormat);
+				endFlightTimestamp = parseTime(endFlightTimeString);
 			}
 		}
 		catch(Exception e)
@@ -335,9 +352,27 @@ public class Parser {
 			System.out.println(e);
 		}
 
-		timeApproach = Double.valueOf(timeApproachStr);
 		timeTotal = Double.valueOf(timeTotalStr);
-		timeLanding = timeTotal - timeApproach;
+
+		if (timeApproachStartStr != null) {
+			 double timeApproachStart = Double.valueOf(timeApproachStartStr);
+			if (timeApproachEndStr != null) {
+				// pilot completed the approach. 
+				// Time elapsed during approach = [approach end time] - [approach start time]
+				double timeApproachEnd = Double.valueOf(timeApproachEndStr);
+				timeApproach = timeApproachEnd - timeApproachStart;
+				timeLanding = timeTotal - timeApproachEnd;
+			} else {
+				// pilot crashed before completing approach. 
+				// Time elapsed during approach = [total flight time] - [approach start time]
+				timeApproach = timeTotal - Double.valueOf(timeApproachStartStr);
+				timeLanding = 0;
+			}
+		} else {
+			// pilot crashed before Initial Approach Fix.
+			timeApproach = 0;
+			timeLanding = 0;
+		}
 
 		// construct flight data object to pass to scorer
 		if (sysTimesIndex == -1) {
@@ -410,6 +445,19 @@ public class Parser {
 		
 		return score;
 
+	}
+
+	public static LocalDateTime parseTime(String timeString) {
+		LocalDateTime time = null;
+		for (DateTimeFormatter format : sysTimeFormat) {
+			try {
+				time = LocalDateTime.parse(timeString, format);
+				break;
+			} catch (DateTimeParseException e) {
+				// keep looping
+			}
+		}
+		return time;
 	}
 	
 	/**

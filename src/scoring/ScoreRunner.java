@@ -18,18 +18,18 @@ public class ScoreRunner {
 
 	/**
 	 * entry point of scoring calculation program
-	 * @param args[0] xplane data file path
 	 * @param args[1] output directory path
+	 * @param args[1] xplane data file path
 	 */
 	public static void main(String[] args) {
-		
-		String xplaneFilePath;
+
 		String outputFolderPath;
-		
+		String xplaneFilePath;
+
 		// Initialize paths
 		if (args.length >= 2) {
-			xplaneFilePath = args[0];
-			outputFolderPath = args[1];
+			outputFolderPath = args[0];
+			xplaneFilePath = args[1];
 		}
 		else {
 			System.out.println("Text file or output directory not specified.");
@@ -42,22 +42,23 @@ public class ScoreRunner {
 			return;
 		}
 		else if (!new File(outputFolderPath).isDirectory()) {
-			System.out.println("Output directory path does not exits.");
+			System.out.printf("Output directory path %s does not exits.");
 			return;
 		}
 
 		// Get name to append to directory and files
-		String name = FileNameUtils.getBaseName(xplaneFilePath);
+		String pid = FileNameUtils.getBaseName(xplaneFilePath).split("_")[0];
 		String xplaneExtension = FileNameUtils.getExtension(xplaneFilePath);
-		String scoringOutputFolder = outputFolderPath + "/" + name + "_scoring";
-		String trimOutputFolder = outputFolderPath+ "/" + name + "_trim";
-		new File(scoringOutputFolder).mkdirs();
+		String outputFolder = outputFolderPath + "/" + pid;
+		String trimOutputFolder = outputFolder + "/" + pid + "_trim";
+		new File(outputFolder).mkdirs();
+		new File(trimOutputFolder).mkdirs();
 
 		if (xplaneExtension.equals("txt")) {
 			// Change txt to csv file
-			String originalCSVFilePath = Parser.txtToCSV(xplaneFilePath, scoringOutputFolder, name);
+			String originalCSVFilePath = Parser.txtToCSV(xplaneFilePath, trimOutputFolder, pid);
 			// file to grade is the new cleansed csv from the original text file
-			xplaneFilePath = Parser.parseData(originalCSVFilePath, scoringOutputFolder, name);
+			xplaneFilePath = Parser.parseData(originalCSVFilePath, trimOutputFolder, pid);
 
 			//initializes the start and stop time for the ILS, Roundout, and landing phase
 
@@ -67,8 +68,9 @@ public class ScoreRunner {
 		}
 
 		// generate pilot success score and other metrics
-		ScoreCalculation score = Parser.parseOutSections(xplaneFilePath, scoringOutputFolder, name);
-		score.writeToFile(scoringOutputFolder);
+		System.out.printf("Scoring %s's data... ", pid);
+		ScoreCalculation score = Parser.parseOutSections(xplaneFilePath, trimOutputFolder, pid);
+		score.writeToFile(outputFolder);
 		System.out.println("Done scoring...");
 
 		FlightData flightData = score.getFlightData();
@@ -101,7 +103,6 @@ public class ScoreRunner {
 			times.add(new Pair<>("end flight", flightData.getEndFlightTimestamp()));
 
 		if (times.size() > 0) {
-			new File(outputFolder).mkdirs();
 			// trim files
 			for (int i = 0; i < gazeFiles.length; i++) {
 				GazeTrimmer.trimGazeFile(gazeFiles[i], outputFolder, times);

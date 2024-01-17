@@ -18,6 +18,11 @@ SystemLog.txt
 
 # local testing
 local_outputs/
+tests/**/output
+
+# documentation
+doxygen/
+
 
 
 
