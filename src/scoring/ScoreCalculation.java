@@ -141,11 +141,11 @@ public class ScoreCalculation {
 			hdef = hDefIter.next();
 			bank = baIterator.next();
 			
-			localizerAddedTotal += hdef;
-			bankAngleAddedTotal += bank;
-			
 			double absValueLoc = Math.abs(hdef);
 			double absValueBank = Math.abs(bank);
+
+			localizerAddedTotal += absValueLoc;
+			bankAngleAddedTotal += absValueBank;
 			
 			if (absValueBank > Math.abs(maxBankAngle))
 			{
@@ -183,12 +183,11 @@ public class ScoreCalculation {
 		double penalty = 0;
 		for(double hdef : horizontalDef) {
 			
-			localizerAddedTotal += hdef;
-			
-			double absValue = Math.abs(hdef);
-			
-			if(absValue  < 2.5) {
-				penalty += absValue / 2.5;
+			double absValueHdef = Math.abs(hdef);
+			localizerAddedTotal += absValueHdef;	
+
+			if(absValueHdef  < 2.5) {
+				penalty += absValueHdef / 2.5;
 			} else {
 				penalty += 1;
 			}
@@ -215,15 +214,14 @@ public class ScoreCalculation {
 			vSpeed = vSpeedIter.next();
 			verticalSpeedAddedTotal += vSpeed;
 			
-			vDef = vDefIter.next();
-			glideslopeAddedTotal += vDef;
-			
-			double absValue = Math.abs(vDef);
+			vDef = vDefIter.next();	
+			double absValueVDef = Math.abs(vDef);
+			glideslopeAddedTotal += absValueVDef;
 
-			if (vSpeed < 1000)
+			if (vSpeed > -1000)	// if descending at rate greater than 1000 ft/min, unstable
 			{
-				if(absValue  < 2.5) {
-					penalty += absValue / 2.5;
+				if(absValueVDef  < 2.5) {
+					penalty += absValueVDef / 2.5;
 				} 
 			}
 			else {
@@ -337,15 +335,15 @@ public class ScoreCalculation {
 	public double scoreRoundOut(List<Double> horiDef, List<Double> rollBank, List<Double> verticalSpeed)
 	{
 		double penalty = 0;
-		double vert;
+		double vSpeed;
 		Iterator<Double> vsIter = verticalSpeed.iterator();
 
 		
 		while(vsIter.hasNext()) {
 			
-			vert = vsIter.next();
+			vSpeed = vsIter.next();
 			
-			if(vert < 1000) {
+			if(vSpeed < -1000) {
 				penalty += 0;
 			} else {
 				penalty += 1;
@@ -410,27 +408,33 @@ public class ScoreCalculation {
 	public void writeToFile(String outputLocation) {
 		String outputFile = outputLocation + "/" + this.participant + "_score.csv";
 		String[] headers = {
-			"Metric",
-			"Outcome",
-			". . . . . . . . . . . . . .",
 			"Overall Score",
 			"Total Time",
 			"Approach Score",
 			"Approach Time",
 			"Landing Score",
 			"Landing Time",
+			"AVG ILS Speed",
+			"AVG VSI Final Approach",
+			"AVG ABS Glideslope Deflection",
+			"AVG ABS Localizer Deflection",
+			"AVG ABS Roll Bank Angle",
+			"MAX ABS Roll Bank Angle",
 		};
 
 		String[] data = {
-			String.valueOf("AVG ILS Speed"),
-			String.valueOf(String.valueOf(averageILSSpeed)),
-			"",
 			String.valueOf(getPercentageScore(scoreType.OVERALL)),
 			String.valueOf(this.data.getTimeTotal()),
 			String.valueOf(getPercentageScore(scoreType.APPROACH)),
 			String.valueOf(this.data.getTimeApproach()),
 			String.valueOf(getPercentageScore(scoreType.LANDING)),
-			String.valueOf(this.data.getTimeLanding())
+			String.valueOf(this.data.getTimeLanding()),
+			String.valueOf(averageILSSpeed),
+			String.valueOf(averageILSVerticalSpeed),
+			String.valueOf(averageGlideslopeDeflection),
+			String.valueOf(averageLocalizerDeflection),
+			String.valueOf(averageBankAngle),
+			String.valueOf(maxBankAngle)
 		};
 
 		try (
@@ -439,11 +443,10 @@ public class ScoreCalculation {
 		){
 			outputCSVWriter.writeNext(headers);
 			outputCSVWriter.writeNext(data);
-			outputCSVWriter.writeNext(new String []{"AVG VSI Final Approach", String.valueOf(averageILSVerticalSpeed)});
-			outputCSVWriter.writeNext(new String []{"AVG Glideslope Deflection", String.valueOf(averageGlideslopeDeflection)});
-			outputCSVWriter.writeNext(new String []{"AVG Localizer Deflection", String.valueOf(averageLocalizerDeflection)});
-			outputCSVWriter.writeNext(new String []{"AVG Roll Bank Angle", String.valueOf(averageBankAngle)});
-			outputCSVWriter.writeNext(new String []{"MAX Roll Bank Angle", String.valueOf(maxBankAngle)});
+			outputCSVWriter.writeNext(new String []{});
+			outputCSVWriter.writeNext(new String []{});
+			outputCSVWriter.writeNext(new String []{});
+			outputCSVWriter.writeNext(new String []{});
 		}
 		catch (FileNotFoundException e) {
 			System.out.println("Unable to open file '" + outputFile + "'");
@@ -454,16 +457,23 @@ public class ScoreCalculation {
 	}
 
 	public double getPercentageScore(scoreType val) {
+		double score;
 		switch(val) {
 			case APPROACH:
-				return this.approachScore[0] / this.approachScore[1];
+				score = this.approachScore[0] / this.approachScore[1];
+				break;
 			case LANDING:
-				return this.landingScore[0] / this.landingScore[1];
+				score =  this.landingScore[0] / this.landingScore[1];
+				break;
 			case OVERALL:
-				return this.overallScore[0] / this.overallScore[1];
+				score = this.overallScore[0] / this.overallScore[1];
+				break;
 			default:
 				return -1;
 		}
+		score = Double.isNaN(score) ? 0.0 : score;
+
+		return score;
 	}
 
 	public String getParticipant() {
