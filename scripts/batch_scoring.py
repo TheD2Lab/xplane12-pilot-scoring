@@ -254,5 +254,5 @@ if __name__ == "__main__":
    elif output_dir == None:
       print("No output directory was provided\n\t(ex: -o my_output_dir).")
 
-   #run_multiple(output_dir, input_dir)
+   run_multiple(output_dir, input_dir)
    summary_analysis(output_dir)
