@@ -25,8 +25,12 @@ import os.path
 import re
 import subprocess
 import sys
+import csv
 
 from glob import glob
+
+headers: list[str] = None
+count: int = 0
 
 def compile_source():
    print("Compiling...")
@@ -74,8 +78,140 @@ def run_multiple(output_dir: str, data_dir: str):
       if "Questionnaires" in p_dir:
          continue
       run_single(output_dir, p_dir)
-
    print()
+
+
+def summary_analysis(dir: str):
+   pilot_dirs = glob(dir + "*" + os.path.sep) # get the child directories
+   labels = ["Measure", "Value", "PID"]
+   measures = [
+      "avg_oscore",
+      "high_oscore",
+      "low_oscore",
+      "avg_otime",
+      "high_otime",
+      "low_otime",
+      "avg_ascore",
+      "high_ascore",
+      "low_ascore",
+      "avg_atime",
+      "high_atime",
+      "low_atime",
+      "avg_lscore",
+      "high_lscore",
+      "low_lscore",
+      "avg_ltime",
+      "high_ltime",
+      "low_ltime",
+   ]
+
+   m_dict = {
+      "avg_oscore" : ['avg_overall_score', 0, ' '],
+      "high_oscore" : ['high_overall_score', 0, None],
+      "low_oscore" : ['low_overall_score', 100, None],
+      "avg_otime" : ['avg_total_time', 0, ' '],
+      "high_otime" : ['high_total_time', 0, ' '],
+      "low_otime" : ['low_total_time', float('inf'), ' '],
+      "avg_ascore" : ['avg_approach_score', 0, ' '],
+      "high_ascore" : ['high_approach_score', 0, None],
+      "low_ascore" : ['low_approach_score', 100, None],
+      "avg_atime" : ['avg_approach_time', 0, ' '],
+      "high_atime" : ['high_approach_time', 0, ' '],
+      "low_atime" : ['low_approach_time', float('inf'), ' '],
+      "avg_lscore" : ['avg_landing_score', 0, ' '],
+      "high_lscore" : ['high_landing_score', 0, None],
+      "low_lscore" : ['low_landing_score', 100, None],
+      "avg_ltime" : ['avg_landing_time', 0, ' '],
+      "high_ltime" : ['high_landing_time', 0, ' '],
+      "low_ltime" : ['low_landing_time', float('inf'), ' ']
+   }
+
+   global count
+   num_index = 1
+   id_index = 2
+
+
+   pilot_scores = []
+   for p_dir in pilot_dirs:
+      score_file = glob(f"{p_dir}/*score.csv")
+      if not score_file:   # glob returned an empty array
+         continue
+      row = single_analysis(score_file[0], m_dict, num_index, id_index)
+      if row:              # row is not empty or None
+         pilot_scores.append(row)
+
+
+   all_scores_file =os.path.join(dir, "all_scores.csv") 
+   with open(all_scores_file, 'w') as write_file:
+      csvwriter = csv.writer(write_file)
+      csvwriter.writerow(["Participant"] + headers)
+      csvwriter.writerows(pilot_scores)
+            
+   m_dict["avg_oscore"][num_index] /= count
+   m_dict["avg_otime"][num_index] /= count
+   m_dict["avg_ascore"][num_index] /= count
+   m_dict["avg_atime"][num_index] /= count
+   m_dict["avg_lscore"][num_index] /= count
+   m_dict["avg_ltime"][num_index] /= count
+
+   summary_file = os.path.join(dir, "score_analysis.csv")
+   with open(summary_file, 'w') as csvfile:
+      csvwriter = csv.writer(csvfile)
+      csvwriter.writerow(labels)
+      for measure in measures:
+         csvwriter.writerow(m_dict[measure])
+
+   print("Analysis summary written")
+
+def single_analysis(score_file: str, m_dict: dict, num_index: int, id_index: int) -> list[str]:
+   values = []
+   with open(score_file, 'r') as read_file:
+      csvreader = csv.reader(read_file)
+      global headers
+      if headers is None:
+         headers = next(csvreader) # set headers
+      else:
+         next(csvreader)            # skip first line
+      values = next(csvreader)
+
+   pid = os.path.basename(os.path.dirname(score_file))
+   is_score_file = False
+   for i, header in enumerate(headers):
+      temp = float(values[i])
+      if header == "Overall Score":
+         update_analysis(m_dict, temp, pid, "avg_oscore", "high_oscore", "low_oscore", num_index, id_index)
+         is_score_file = True       # file contains scores
+      elif header == "Total Time":
+         update_analysis(m_dict, temp, pid, "avg_otime", "high_otime", "low_otime", num_index, id_index)
+      
+      elif header == "Approach Score":
+         update_analysis(m_dict, temp, pid, "avg_ascore", "high_ascore", "low_ascore", num_index, id_index)
+
+      elif header == "Approach Time":
+         update_analysis(m_dict, temp, pid, "avg_atime", "high_atime", "low_atime", num_index, id_index)
+      
+      elif header == "Landing Score":
+         update_analysis(m_dict, temp, pid, "avg_lscore", "high_lscore", "low_lscore", num_index, id_index)
+
+      elif header == "Landing Time":
+         update_analysis(m_dict, temp, pid, "avg_ltime", "high_ltime", "low_ltime", num_index, id_index)
+
+   if is_score_file:
+      global count
+      count += 1
+      return [pid] + values
+
+def update_analysis(m_dict, value, pid, avg_str,high_str, low_str, num_index, id_index):
+   m_dict[avg_str][num_index] += value
+
+   if value > m_dict[high_str][num_index]:
+      m_dict[high_str][num_index] = value
+      m_dict[high_str][id_index] = pid
+
+   if value < m_dict[low_str][num_index]:
+      m_dict[low_str][num_index] = value
+      m_dict[low_str][id_index] = pid 
+
 
 """
 Input Arguments:
@@ -119,3 +255,4 @@ if __name__ == "__main__":
       print("No output directory was provided\n\t(ex: -o my_output_dir).")
 
    run_multiple(output_dir, input_dir)
+   summary_analysis(output_dir)

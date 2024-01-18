@@ -354,6 +354,7 @@ public class Parser {
 
 		timeTotal = Double.valueOf(timeTotalStr);
 
+
 		if (timeApproachStartStr != null) {
 			 double timeApproachStart = Double.valueOf(timeApproachStartStr);
 			if (timeApproachEndStr != null) {
@@ -372,6 +373,10 @@ public class Parser {
 			// pilot crashed before Initial Approach Fix.
 			timeApproach = 0;
 			timeLanding = 0;
+		}
+
+		if (timeApproach < 0 || timeLanding < 0) {
+			System.out.println(name + " time is negative");
 		}
 
 		// construct flight data object to pass to scorer
