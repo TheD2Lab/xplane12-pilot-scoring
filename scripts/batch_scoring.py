@@ -48,27 +48,25 @@ def run_single(output_dir: str, pilot_dir: str):
       "./libs/common-lang3.jar:./libs/opencsv-5.7.0.jar:./libs/weka.jar:./src",
       "scoring/ScoreRunner"
    ]
-   data_files: list[str] = glob(f"{pilot_dir}/*.csv")
-   flight_data_index: int = -1
+   data_files: list[str] = []
+   txt_file = glob(f"{pilot_dir}/*xplane.txt")  # check for xplane.txt file
 
+   if txt_file:   # xplane.txt file found, so txt_files is not empty
+      data_files += txt_file
+   else:          # no flight data found
+      print(f"No xplane.txt found in {pilot_dir}")
+      return
+   data_files += glob(f"{pilot_dir}/*.csv")
+
+   datarefs_index = -1
    for i, file in enumerate(data_files):
       if re.search(regex, file):
-         flight_data_index = i
+         datarefs_index = i
          break
 
-   # no datarefs file, find xplane.txt file
-   if flight_data_index == -1:
-      txt_file = glob(f"{pilot_dir}/*xplane.txt")  # check for xplane.txt file
-
-      if txt_file:   # xplane.txt file found, so txt_files is not empty
-         data_files += txt_file
-         flight_data_index = len(data_files) - 1
-      else:          # no flight data found
-         print(f"No flight data found in {pilot_dir}")
-         return
-   
-   # put flight data file in front of list
-   data_files[0], data_files[flight_data_index] = data_files[flight_data_index], data_files[0]
+   if datarefs_index != -1:
+      # put datarefs file second in list
+      data_files[1], data_files[datarefs_index] = data_files[datarefs_index], data_files[1]
    java_program += [output_dir] + data_files
    subprocess.run(java_program)
 

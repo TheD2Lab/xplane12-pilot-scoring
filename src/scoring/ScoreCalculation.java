@@ -11,7 +11,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import com.opencsv.CSVWriter;
 
@@ -21,6 +20,7 @@ public class ScoreCalculation {
 	private final static int MAX_PTS_PER_DATA_POINT_ILS = 3;
 	private final static int MAX_PTS_PER_DATA_POINT_ROUNDOUT = 2; 
 	private final static int MAX_PTS_PER_DATA_POINT_LANDING = 2;
+	private final static int TARGET_SPEED = 90;
 
 	private String participant;
 
@@ -37,13 +37,6 @@ public class ScoreCalculation {
 	private String finalApproachFile;
 	private String roundoutFile;
 	private String landingFile;
-
-	// Number of lines in data
-	private int numOfData = 0;
-	private int numOfStepdownData = 0; 
-	private int numOfFinalApproachData = 0;
-	private int numOfRoundoutData = 0;
-	private int numOfLandingData = 0;
 	
 	// Additional X-Plane measures
 	private double averageILSSpeed = 0; // Includes stepdown portion and final approach portion
@@ -89,19 +82,13 @@ public class ScoreCalculation {
 	 * @param numR
 	 * @param numL
 	 */
-	public ScoreCalculation(String name, String sdFile, String faFile, String rFile, String lFile,
-		int numData, int numSD, int numFA, int numR, int numL, FlightData data) {
+	public ScoreCalculation(String name, String sdFile, String faFile, String rFile, String lFile, FlightData data) {
 
 		this.participant = name;
 		this.stepdownFile = sdFile;
 		this.finalApproachFile = faFile;
 		this.roundoutFile = rFile;
 		this.landingFile = lFile;
-		this.numOfData = numData;
-		this.numOfStepdownData = numSD;
-		this.numOfFinalApproachData = numFA;
-		this.numOfRoundoutData = numR;
-		this.numOfLandingData = numL;
 		this.data = data;
 		setMaxPoints();
 		scoreCalc();
@@ -111,126 +98,100 @@ public class ScoreCalculation {
 	 * Calculates the max points for the overall score and sub-scores.
 	 */
 	private void setMaxPoints() {
+
+		double possible_points;
 		// set approach score to max possible points
-		this.approachScore[1] = (this.numOfStepdownData + this.numOfFinalApproachData)*MAX_PTS_PER_DATA_POINT_ILS;
-		this.approachScore[0] = this.approachScore[1];
+		possible_points = (this.data.getApproachData().size() + this.data.getStepdownData().size())*MAX_PTS_PER_DATA_POINT_ILS; 
+
+		if(possible_points > 0) {
+			this.approachScore[1] = possible_points;
+			this.approachScore[0] = possible_points;
+		} else {
+			this.approachScore[1] = 1;
+			this.approachScore[0] = 0;
+		}
 
 		// set roundout score to max possible points
-		this.landingScore[1] = this.numOfRoundoutData * MAX_PTS_PER_DATA_POINT_ROUNDOUT
-			+ this.numOfLandingData * MAX_PTS_PER_DATA_POINT_LANDING;
-		this.landingScore[0] = this.landingScore[1];
+		possible_points = this.data.getRoundoutData().size() * MAX_PTS_PER_DATA_POINT_ROUNDOUT
+			+ this.data.getLandingData().size() * MAX_PTS_PER_DATA_POINT_LANDING; 
+		if (possible_points > 0) {
+			this.landingScore[1] = possible_points;
+			this.landingScore[0] = possible_points;
+		}
+		
 
 		// set max score to max possible points
 		this.overallScore[1] = this.approachScore[1] + this.landingScore[1];
-		this.overallScore[0] = this.overallScore[1];
+		this.overallScore[0] = this.approachScore[0] + this.landingScore[0];
 	}
 
 	/**
-	 * returns the total score penalty for the localizer portion of the ILS approach
-	 * @param horizontalDef is all of the localizer position of the aircraft in dots
-	 * @return double Returns the total penalty
+	 * Returns the localizer penalty for a single data point.
+	 * @param hdef is all of the localizer position of the aircraft in dots
+	 * @return returns the penalty
 	 */
-	private double localizerScorePenalty(List<Double> horizontalDef, List<Double> bankAngle) {
+	private double localizerScorePenalty(double hdef, double bankAngle) {
 		double penalty = 0;
-		double hdef;
-		double bank;
-		Iterator<Double> hDefIter = horizontalDef.iterator();
-		Iterator<Double> baIterator = bankAngle.iterator();
+		double absValueLoc = Math.abs(hdef);
+		double absValueBank = Math.abs(bankAngle);
 
-		while(hDefIter.hasNext()) {		// horizontalDef and bankAngle are the same length. We only check one.
-			hdef = hDefIter.next();
-			bank = baIterator.next();
-			
-			double absValueLoc = Math.abs(hdef);
-			double absValueBank = Math.abs(bank);
-
-			localizerAddedTotal += absValueLoc;
-			bankAngleAddedTotal += absValueBank;
-			
-			if (absValueBank > Math.abs(maxBankAngle))
-			{
-				maxBankAngle = bank;
-			}
-			
-			if (absValueBank < 15)
-			{
-				if(absValueLoc  < 2.5) {
-					penalty += absValueLoc / 2.5;
-				}
-				else {
-					penalty += 1;
-				}
-			}
-			else {
-				penalty += 1;
-			}
+		localizerAddedTotal += absValueLoc;
+		bankAngleAddedTotal += absValueBank;
+		
+		if (absValueBank > Math.abs(this.maxBankAngle))
+		{
+			this.maxBankAngle = absValueBank;
 		}
 		
-		averageLocalizerDeflection = localizerAddedTotal / (numOfStepdownData + numOfFinalApproachData
-				+ numOfRoundoutData + numOfLandingData);
-		averageBankAngle = bankAngleAddedTotal / (numOfStepdownData + numOfFinalApproachData
-				+ numOfRoundoutData + numOfLandingData);
+		if (absValueBank < 15 && absValueLoc < 2.5) {
+			penalty = absValueLoc / 2.5;	
+		} else {
+			penalty = 1;
+		}
 		
 		return penalty;
 	}
 	
 	/**
 	 * returns the total score penalty for the localizer in the landing portion
-	 * @param horizontalDef is all of the localizer position of the aircraft in dots
+	 * @param hdef is all of the localizer position of the aircraft in dots
 	 * @return double Returns the total penalty
 	 */
-	private double localizerScorePenaltyLanding(List<Double> horizontalDef) {
+	private double localizerScorePenaltyLanding(double hdef) {
 		double penalty = 0;
-		for(double hdef : horizontalDef) {
-			
-			double absValueHdef = Math.abs(hdef);
-			localizerAddedTotal += absValueHdef;	
+		double absValueHdef = Math.abs(hdef);
+		localizerAddedTotal += absValueHdef;	
 
-			if(absValueHdef  < 2.5) {
-				penalty += absValueHdef / 2.5;
-			} else {
-				penalty += 1;
-			}
+		if(absValueHdef  < 2.5) {
+			penalty = absValueHdef / 2.5;
+		} else {
+			penalty = 1;
 		}
-		averageLocalizerDeflection = localizerAddedTotal / (numOfStepdownData + numOfFinalApproachData
-				+ numOfRoundoutData + numOfLandingData);
 		
 		return penalty;
 	}
 
 	/**
 	 * returns the total score penalty for the glideslope portion of the ILS approach
-	 * @param verticalDef is all of the vertical position of the aircraft in dots
+	 * @param vdef is all of the vertical position of the aircraft in dots
 	 * @return double Returns the total penalty
 	 */
-	private double glideSlopeScorePenalty(List<Double> verticalDef, List<Double> verticalSpeed) {
+	private double glideSlopeScorePenalty(double vdef, double vspeed) {
 		double penalty = 0;
-		double vSpeed;
-		double vDef;
-		Iterator<Double> vDefIter = verticalDef.iterator();		// verticalDef is a LinkedList
-		Iterator<Double> vSpeedIter = verticalSpeed.iterator();	// verticalSpeed is a LinkedList
-
-		while(vDefIter.hasNext())	{	// verticalDef and vertical speed are the same length. We only check one.
-			vSpeed = vSpeedIter.next();
-			verticalSpeedAddedTotal += vSpeed;
-			
-			vDef = vDefIter.next();	
-			double absValueVDef = Math.abs(vDef);
-			glideslopeAddedTotal += absValueVDef;
-
-			if (vSpeed > -1000)	// if descending at rate greater than 1000 ft/min, unstable
-			{
-				if(absValueVDef  < 2.5) {
-					penalty += absValueVDef / 2.5;
-				} 
-			}
-			else {
-				penalty += 1;
-			}
-		}
+		verticalSpeedAddedTotal += vspeed;
 		
-		averageGlideslopeDeflection = glideslopeAddedTotal / verticalDef.size();
-		averageILSVerticalSpeed = verticalSpeedAddedTotal / verticalSpeed.size();
+		double absValueVDef = Math.abs(vdef);
+		glideslopeAddedTotal += absValueVDef;
+
+		if (vspeed > -1000)	// if descending at rate greater than 1000 ft/min, unstable
+		{
+			if(absValueVDef  < 2.5) {
+				penalty += absValueVDef / 2.5;
+			} 
+		}
+		else {
+			penalty += 1;
+		}
 		
 		return penalty;
 	}
@@ -240,49 +201,36 @@ public class ScoreCalculation {
 	 * @param altitude the altitude of the aircraft during the ILS approach
 	 * @return
 	 */
-	private double altitudeILSCalcPenalty(List<Double> dmes, List<Double>altitudes, List<Double> verticalSpeed) {
+	private double altitudeILSCalcPenalty(double dme, double altitude, double vspeed) {
 		double penalty = 0;
 		int currentFix = 0;
 
-		// Use iterators to optimize LinkedList support. Flight Data uses LinkedList.
-		// Indexing a LinkedList using list[i] is O(n).
-		// If this does not make sense to you, please stop programming and review data structures 101
-		Iterator<Double> dmeIter = dmes.iterator();
-		Iterator<Double> altIter = altitudes.iterator();
-		Iterator<Double> vsIter = verticalSpeed.iterator();
-		double dmeVal;
-		double altVal;
-		double vertSpeed;
+		this.verticalSpeedAddedTotal += vspeed;
 
-		while(dmeIter.hasNext() && altIter.hasNext()) {
-			dmeVal = dmeIter.next();
-			altVal = altIter.next();
-			vertSpeed = vsIter.next();	
-
-			// check which fix plane is approaching
-			while (dmeVal < STEPDOWN_FIXES.get(currentFix).dme) {
-				currentFix++;
-			}
-			
-			if (vertSpeed < 1000)
+		// TODO: do this more efficiently with new scoring algo
+		// check which fix plane is approaching
+		while (dme < STEPDOWN_FIXES.get(currentFix).dme) {
+			currentFix++;
+		}
+		
+		if (vspeed < 1000)
+		{
+			if (altitude > STEPDOWN_FIXES.get(currentFix).altitude)
 			{
-				if (altVal > STEPDOWN_FIXES.get(currentFix).altitude)
-				{
-					penalty += 0;
-				}
-				else if (altVal > STEPDOWN_FIXES.get(currentFix).altitude - 100) {
-					penalty += (STEPDOWN_FIXES.get(currentFix).altitude - altVal) / 100;
-				}
-				else {
-					penalty += 1;
-				}
-				
+				penalty = 0;
 			}
-			else
-			{
-				penalty += 1;
+			else if (altitude > STEPDOWN_FIXES.get(currentFix).altitude - 100) {
+				penalty = (STEPDOWN_FIXES.get(currentFix).altitude - altitude) / 100;
+			}
+			else {
+				penalty = 1;
 			}
 		}
+		else
+		{
+			penalty = 1;
+		}
+		
 		return penalty;
 	}
 
@@ -291,78 +239,88 @@ public class ScoreCalculation {
 	 * @param speed The speed of the aircraft during the ILS approach
 	 * @return double Returns the total penalty
 	 */
-	private double speedILSCalcPenalty(List<Double> speeds) {
+	private double speedILSCalcPenalty(double speed) {
 		double penalty = 0;
-		int assignedSpeed = 90;
-		for(double speed : speeds) {
-			speedAddedTotal += speed;
-			double difference = Math.abs(speed - assignedSpeed);
-			if (difference < 10)
-			{
-				penalty += (difference / 10);
-			}
-			else {
-				penalty += 1;
-			}
+
+		speedAddedTotal += speed;
+		double difference = Math.abs(speed - TARGET_SPEED);
+		if (difference < 10)
+		{
+			penalty += (difference / 10);
+		}
+		else {
+			penalty += 1;
 		}
 		
-		averageILSSpeed = speedAddedTotal / (numOfStepdownData + numOfFinalApproachData);
 		return penalty;
 	}
 
-	public double scoreStepdownCalc(List<Double> horiDef, List<Double> speed, List<Double> altitude, List<Double> dme,
-			List<Double> rollBank, List<Double> verticalSpeed) {
-		return localizerScorePenalty(horiDef, rollBank) + speedILSCalcPenalty(speed) + altitudeILSCalcPenalty(dme, altitude, verticalSpeed);
+	public double scoreStepdownCalc() {
+		double penalty = 0;
+
+		for (FlightDataPoint point : this.data.getStepdownData()) {
+			penalty += localizerScorePenalty(point.getHdef(), point.getBank()) 
+				+ speedILSCalcPenalty(point.getAirspeed())
+				+ altitudeILSCalcPenalty(point.getDme(), point.getAltitude(), point.getVertSpeed());
+		}
+
+		return penalty;
 	}
 
 	/**
 	 * returns the total penalty for the final approach. Based on the localizer, glideslope, and speed
-	 * @param horiDef all of the localizer position of the aircraft
-	 * @param speed The speed of the aircraft during the ILS approach
-	 * @param vertDef all of the glideslope position of the aircraft
 	 * @return double Returns the total penalty
 	 */
-	public double scoreFinalApproachCalc(List<Double> horiDef, List<Double> speed, List<Double> vertDef,
-			List<Double> verticalSpeed, List<Double> rollBankFinalApp) {	
-		return localizerScorePenalty(horiDef, rollBankFinalApp) + speedILSCalcPenalty(speed) + glideSlopeScorePenalty(vertDef, verticalSpeed);
+	public double scoreFinalApproachCalc() {	
+		double penalty = 0;
+		for (FlightDataPoint point : this.data.getApproachData()) {
+			penalty += localizerScorePenalty(point.getHdef(), point.getBank())
+			+ speedILSCalcPenalty(point.getAirspeed())
+			+ glideSlopeScorePenalty(point.getVdef(), point.getVertSpeed());
+		}
+		return penalty;
 	}
 
 	/**
 	 * returns the total penalty for the roundout phase. Based on altitude. Looking to see that the plane is continuously descending
-	 * @param altitude contains all the altitude information for the aircraft
-	 * @return double Returns the total Penalty
+	 * @return the total penalty for the roundout stage
 	 */
-	public double scoreRoundOut(List<Double> horiDef, List<Double> rollBank, List<Double> verticalSpeed)
+	public double scoreRoundOut()
 	{
 		double penalty = 0;
-		double vSpeed;
-		Iterator<Double> vsIter = verticalSpeed.iterator();
 
-		
-		while(vsIter.hasNext()) {
-			
-			vSpeed = vsIter.next();
-			
-			if(vSpeed < -1000) {
-				penalty += 0;
-			} else {
-				penalty += 1;
-			}
+		for (FlightDataPoint point : this.data.getRoundoutData()) {
+			penalty += scoreVerticalSpeed(point.getVertSpeed());
+			localizerScorePenalty(point.getHdef(), point.getBank());
 		}
-		
-		penalty += localizerScorePenalty(horiDef, rollBank);
+
+		return penalty;
+	}
+
+	/**
+	 * Returns the vertical speed penalty given a single speed value.
+	 * @param vspeed vertical speed of the aircraft
+	 * @return the vertical speed penalty
+	 */
+	public double scoreVerticalSpeed(double vspeed) {
+		double penalty = 0;
+
+		if (vspeed < -1000) {	// descending faster than 1000 ft/min
+			penalty = 1;
+		}
+
 		return penalty;
 	}
 
 	/**
 	 * returns the total penalty for the landing Phase. Based on centerline and altitude
-	 * @param altitude contains all the altitude information for the aircraft
-	 * @return double Returns the total Penalty
+	 * @return the penalty for the landing stage
 	 */
-	public double scoreLanding(List<Double> horiDef)
-	{
+	public double scoreLanding() {
 		double penalty = 0; 
-		penalty += localizerScorePenaltyLanding(horiDef);
+		for (FlightDataPoint point : this.data.getLandingData()) {
+			penalty += localizerScorePenaltyLanding(point.getHdef());
+		}
 		return penalty;
 	}
 
@@ -373,34 +331,26 @@ public class ScoreCalculation {
 	 */
 	public void scoreCalc() {
 
-		this.approachScore[0] -= scoreStepdownCalc(
-			data.getHDefStepdown(), 
-			data.getSpeedStepdown(), 
-			data.getAltStepdown(), 
-			data.getDmeStepdown(),
-			data.getRollBankStepdown(),
-			data.getVerticalSpeedStepdown()
-		);
+		this.approachScore[0] -= scoreStepdownCalc();
 
-		this.approachScore[0] -= scoreFinalApproachCalc(
-			data.getHDefFinalApproach(),
-			data.getSpeedFinalApproach(),
-			data.getVDefFinalApproach(),
-			data.getVerticalSpeedFinalApp(),
-			data.getRollFinalApp()
-		);
+		this.approachScore[0] -= scoreFinalApproachCalc();
 
-		this.landingScore[0] -= scoreRoundOut(
-				data.getHDefRoundout(),
-				data.getRollBankRoundout(),
-				data.getVerticalSpeedRoundout()
-		);
+		this.landingScore[0] -= scoreRoundOut();
 		
-		this.landingScore[0] -= scoreLanding(
-				data.getHDefLanding()
-		);
+		this.landingScore[0] -= scoreLanding();
 
 		this.overallScore[0] = this.landingScore[0] + this.approachScore[0];
+		
+		// bank angle in all stages
+		this.averageBankAngle = this.bankAngleAddedTotal / this.getNumOfData();
+		// glideslope (vertical) defections during final approach stage
+		this.averageGlideslopeDeflection = this.glideslopeAddedTotal / this.getNumOfFinalApproachData();
+		// airspeed during stepdown and final approach stages
+		this.averageILSSpeed = this.speedAddedTotal / (this.getNumOfStepDownData() + this.getNumOfFinalApproachData());
+		// vertical speed during stepdown and final approach stages
+		this.averageILSVerticalSpeed = this.verticalSpeedAddedTotal / (this.getNumOfStepDownData() + this.getNumOfFinalApproachData());
+		// average localizer (horizontal) deflections in all stages
+		this.averageLocalizerDeflection = this.localizerAddedTotal / this.getNumOfData();
 	}
 	
 	// Below are housekeeping items
@@ -471,7 +421,6 @@ public class ScoreCalculation {
 			default:
 				return -1;
 		}
-		score = Double.isNaN(score) ? 0.0 : score;
 
 		return score;
 	}
@@ -488,64 +437,35 @@ public class ScoreCalculation {
 	 * @return the numOfData
 	 */
 	public int getNumOfData() {
-		return this.numOfData;
-	}
-
-	/**
-	 * @param numOfData the numOfData to set
-	 */
-	public void setNumOfData(int numOfData) {
-		this.numOfData = numOfData;
-	}
-
-	public void setNumOfStepDownData(int numOfStepdownData) {
-		this.numOfStepdownData = numOfStepdownData;
+		return this.getNumOfStepDownData()
+			+ this.getNumOfFinalApproachData()
+			+ this.getNumOfRoundoutData()
+			+ this.getNumOfLandingData();
 	}
 
 	public int getNumOfStepDownData() {
-		return this.numOfStepdownData;
+		return this.data.getStepdownData().size();
 	}
 
 	/**
 	 * @return the numOfILSData
 	 */
 	public int getNumOfFinalApproachData() {
-		return this.numOfFinalApproachData;
-	}
-
-	/**
-	 * @param numOfILSData the numOfILSData to set
-	 */
-	public void setNumOfFinalApproachData(int numOfILSData) {
-		this.numOfFinalApproachData = numOfILSData;
+		return this.data.getApproachData().size();
 	}
 
 	/**
 	 * @return the numOfLandingData
 	 */
 	public int getNumOfLandingData() {
-		return this.numOfLandingData;
-	}
-
-	/**
-	 * @param numOfLandingData the numOfLandingData to set
-	 */
-	public void setNumOfLandingData(int numOfLandingData) {
-		this.numOfLandingData = numOfLandingData;
+		return this.data.getLandingData().size();
 	}
 
 	/**
 	 * @return the numOfRoundoutData
 	 */
 	public int getNumOfRoundoutData() {
-		return this.numOfRoundoutData;
-	}
-
-	/**
-	 * @param numOfRoundoutData the numOfRoundoutData to set
-	 */
-	public void setNumOfRoundoutData(int numOfRoundoutData) {
-		this.numOfRoundoutData = numOfRoundoutData;
+		return this.data.getApproachData().size();
 	}
 
 	public String getStepdownFile() {
