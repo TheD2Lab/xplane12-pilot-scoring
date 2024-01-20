@@ -62,7 +62,7 @@ public class ScoreRunner {
 
 			//initializes the start and stop time for the ILS, Roundout, and landing phase
 
-		} else if (!xplaneExtension.equals("csv")) {
+		} else {
 			System.out.println("Xplane data is not in a supported file type");
 			return;
 		}
