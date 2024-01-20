@@ -12,10 +12,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvValidationException;
+
 
 public class Parser {
 
@@ -160,39 +160,16 @@ public class Parser {
 		String landingOutputFilePath = basePathName+ "_landing.csv";
 
 		FlightData data;
-		// Stepdown portion
-		List<Double> altStepdown = new LinkedList<>();
-		List<Double> dmeStepdown = new LinkedList<>();
-		List<Double> speedStepdown = new LinkedList<>();
-		List<Double> hDefStepdown = new LinkedList<>();
-		List<Double> rollBankStepdown = new LinkedList<>();
-		List<Double> verticalSpeedStepdown = new LinkedList<>();
-		// Final approach portion
-		List<Double> vDefFinalApproach = new LinkedList<>();
-		List<Double> speedFinalApproach = new LinkedList<>();
-		List<Double> hDefFinalApproach = new LinkedList<>();
-		List<Double> verticalSpeedFinalApp = new LinkedList<>();
-		List<Double> rollBankFinalApp = new LinkedList<>();
-		// Roundout portion
-		List<Double> altRoundout = new LinkedList<>();
-		List<Double> hDefRoundout = new LinkedList<>();
-		List<Double> rollBankRoundout = new LinkedList<>();
-		List<Double> verticalSpeedRoundout = new LinkedList<>();
-		// Landing portion
-		List<Double> altLanding = new LinkedList<>();
-		List<Double> hDefLanding = new LinkedList<>();
-		String timeApproachStartStr = null;
-		String timeApproachEndStr = null;
+		List<FlightDataPoint> stepdownData = new LinkedList<>();
+		List<FlightDataPoint> finalApproachData = new LinkedList<>();
+		List<FlightDataPoint> roundoutData = new LinkedList<>();
+		List<FlightDataPoint> landingData = new LinkedList<>();
+		Double timeApproachStart = null;
+		Double timeRoundoutStart = null;
 		String timeTotalStr = null;
 		double timeApproach = 0;
 		double timeLanding = 0;
 		double timeTotal = 0;
-
-		// count number of entries for each portion of flight
-		int numStepdown = 0;
-		int numFinalApproach = 0;
-		int numRoundout = 0;
-		int numLanding = 0;
 
 		// timestamps
 		LocalDateTime beginFlightTimestamp = null;
@@ -203,18 +180,7 @@ public class Parser {
 		String endFlightTimeString = null;
 
 		// the indexes for the X-Plane data we use for scoring and statistics
-		int sysTimesIndex = -1;
-		int altitudeIndex = -1;
-		int dmeIndex = -1;
-		int hdefIndex = -1;
-		int vdefIndex = -1;
-		int speedIndex = -1;
-		int timeIndex = -1;
-		int groundRollIndex = -1;
-		int verticalSpeedIndex = -1;
-		int rollBankAngleIndex = -1;
-		int engineRPMIndex = -1;
-		int magHeadingIndex = -1;
+		DataIndex indexes = new DataIndex();
 
 		// Note: try-with-resources automatically closes files
 		try (
@@ -235,40 +201,46 @@ public class Parser {
 
 				switch (headers[i]) {
 					case "sys_time":
-						sysTimesIndex = i;
+						indexes.setiSysTime(i);
 						break;
 					case "p-alt,ftMSL":
-						altitudeIndex = i;
+						indexes.setiAlt(i);
 						break;
 					case"pilN1,dme-d":
-						dmeIndex = i;
+						indexes.setiDme(i);
 						break;
 					case "pilN1,h-def":
-						hdefIndex = i;
+						indexes.setiHdef(i);
 						break;
 					case "_Vind,_kias":
-						speedIndex = i;
+						indexes.setiASpeed(i);
 						break;
 					case "engn1,__rpm":
-						engineRPMIndex = i;
+						indexes.setiEng(i);
 						break;
 					case "pilN1,v-def":
-						vdefIndex = i;
+						indexes.setiVdef(i);
 						break;
 					case "missn,_time":
-						timeIndex = i;
+						indexes.setiMTime(i);
 						break;
 					case "_land,groll":
-						groundRollIndex = i;
+						indexes.setiGroll(i);
 						break;
 					case "__VVI,__fpm":
-						verticalSpeedIndex = i;
+						indexes.setiVspeed(i);
 						break;
 					case "_roll,__deg":
-						rollBankAngleIndex = i;
+						indexes.setiBank(i);
 						break;
 					case "hding,__mag":
-						magHeadingIndex = i;
+						indexes.setiHead(i);
+						break;
+					case "__lat,__deg":
+						indexes.setiLatitude(i);
+						break;
+					case "__lon,__deg":
+						indexes.setiLongitude(i);
 						break;
 				}
 			}
@@ -281,65 +253,55 @@ public class Parser {
 			while ((row = csvReader.readNext()) != null) 
 			{
 				// Do not start scoring until after participant reaches Initial Approach Fix - JIPOX
-				if (Double.valueOf(row[dmeIndex]) > initialAppFixDME) {
-					if (sysTimesIndex != -1 && beginFlightTimestamp == null) {
-						beginFlightTimestamp = parseTime(row[sysTimesIndex]);
+				if (Double.valueOf(row[indexes.getiDme()]) > initialAppFixDME) {
+					if (indexes.getiSysTime() != -1 && beginFlightTimestamp == null) {
+						beginFlightTimestamp = parseTime(row[indexes.getiSysTime()]);
 					}
-					timeApproachStartStr = row[timeIndex];
 					continue;
 				
 				// ILS Stepdown portion
-				} else if(Double.valueOf(row[dmeIndex]) < initialAppFixDME && Double.valueOf(row[dmeIndex])>intersectionDME) {
+				} else if(Double.valueOf(row[indexes.getiDme()]) < initialAppFixDME && Double.valueOf(row[indexes.getiDme()])>intersectionDME) {
 					outputStepdownCSVWriter.writeNext(row);
-					numStepdown++;
-					altStepdown.add(Double.valueOf(row[altitudeIndex]));
-					dmeStepdown.add(Double.valueOf(row[dmeIndex]));
-					speedStepdown.add(Double.valueOf(row[speedIndex]));
-					hDefStepdown.add(Double.valueOf(row[hdefIndex]));
-					rollBankStepdown.add(Double.valueOf(row[rollBankAngleIndex]));
-					verticalSpeedStepdown.add(Double.valueOf(row[verticalSpeedIndex]));
-					if (sysTimesIndex != -1 && beginApproachTimestamp == null) {
-						beginApproachTimestamp = parseTime(row[sysTimesIndex]);
-					} 
+					stepdownData.add(listToDataPoint(row, indexes));
+					if (timeApproachStart == null) {
+						timeApproachStart	= Double.parseDouble(row[indexes.getiMTime()]); 
+						if (indexes.getiSysTime() != -1 && beginApproachTimestamp == null) {
+							beginApproachTimestamp = parseTime(row[indexes.getiSysTime()]);
+						} 
+
+					}
+					
 
 				// ILS Final Approach portion
-				} else if(Double.valueOf(row[altitudeIndex])>minimumsAltitude) {
+				} else if(Double.valueOf(row[indexes.getiAlt()])>minimumsAltitude) {
 					outputFinalApproachCSVWriter.writeNext(row);
-					numFinalApproach++;
-					vDefFinalApproach.add(Double.valueOf(row[vdefIndex]));
-					speedFinalApproach.add(Double.valueOf(row[speedIndex]));
-					verticalSpeedFinalApp.add(Double.valueOf(row[verticalSpeedIndex]));
-					hDefFinalApproach.add(Double.valueOf(row[hdefIndex]));
-					timeApproachEndStr = row[timeIndex];
-					rollBankFinalApp.add(Double.valueOf(row[rollBankAngleIndex]));
+					finalApproachData.add(listToDataPoint(row, indexes));
 
 				// Roundout portion: From minimums, descent to the runway portion
-				} else if(!(Double.valueOf(row[groundRollIndex])>0)){
+				} else if(!(Double.valueOf(row[indexes.getiGroll()])>0)){
 					outputRoundOutCSVWriter.writeNext(row);
-					numRoundout++;
-					hDefRoundout.add(Double.valueOf(row[hdefIndex]));
-					altRoundout.add(Double.valueOf(row[altitudeIndex]));
-					rollBankRoundout.add(Double.valueOf(row[rollBankAngleIndex]));
-					verticalSpeedRoundout.add(Double.valueOf(row[verticalSpeedIndex]));
-					if (sysTimesIndex != -1 && beginRoundOutTimestamp == null) {
-						beginRoundOutTimestamp = parseTime(row[sysTimesIndex]);
-					} 
+					roundoutData.add(listToDataPoint(row, indexes));
+					if (timeRoundoutStart == null) {
+						timeRoundoutStart = Double.parseDouble(row[indexes.getiMTime()]);
+						if (indexes.getiSysTime() != -1 && beginRoundOutTimestamp == null) {
+							beginRoundOutTimestamp = parseTime(row[indexes.getiSysTime()]);
+						}
+					}
 					
 				// Wheels touch the ground portion
 				} else {
 					outputLandingCSVWriter.writeNext(row);
-					numLanding++;
-					altLanding.add(Double.valueOf(row[altitudeIndex]));
-					hDefLanding.add(Double.valueOf(row[hdefIndex]));
-					if (sysTimesIndex != -1 && beginLandingTimestamp == null) {
-						beginLandingTimestamp = parseTime(row[sysTimesIndex]);
+					landingData.add(listToDataPoint(row, indexes));
+
+					if (indexes.getiSysTime() != -1 && beginLandingTimestamp == null) {
+						beginLandingTimestamp = parseTime(row[indexes.getiSysTime()]);
 					} 
 				}
 
-				if (Double.valueOf(row[speedIndex]) > 0) {
-					timeTotalStr = row[timeIndex];
-					if (sysTimesIndex != -1)
-						endFlightTimeString = row[sysTimesIndex];
+				if (Double.valueOf(row[indexes.getiASpeed()]) > 0) {
+					timeTotalStr = row[indexes.getiMTime()];
+					if (indexes.getiSysTime() != -1)
+						endFlightTimeString = row[indexes.getiSysTime()];
 				}
 			}
 			if (endFlightTimeString != null) {
@@ -355,18 +317,16 @@ public class Parser {
 		timeTotal = Double.valueOf(timeTotalStr);
 
 
-		if (timeApproachStartStr != null) {
-			 double timeApproachStart = Double.valueOf(timeApproachStartStr);
-			if (timeApproachEndStr != null) {
+		if (timeApproachStart != null) {
+			if (timeRoundoutStart != null) {
 				// pilot completed the approach. 
 				// Time elapsed during approach = [approach end time] - [approach start time]
-				double timeApproachEnd = Double.valueOf(timeApproachEndStr);
-				timeApproach = timeApproachEnd - timeApproachStart;
-				timeLanding = timeTotal - timeApproachEnd;
+				timeApproach = timeRoundoutStart - timeApproachStart;
+				timeLanding = timeTotal - timeRoundoutStart;
 			} else {
 				// pilot crashed before completing approach. 
 				// Time elapsed during approach = [total flight time] - [approach start time]
-				timeApproach = timeTotal - Double.valueOf(timeApproachStartStr);
+				timeApproach = timeTotal - timeApproachStart;
 				timeLanding = 0;
 			}
 		} else {
@@ -380,25 +340,12 @@ public class Parser {
 		}
 
 		// construct flight data object to pass to scorer
-		if (sysTimesIndex == -1) {
+		if (indexes.getiSysTime() == -1) {
 			data = new FlightData(
-				altStepdown,
-				dmeStepdown,
-				speedStepdown,
-				hDefStepdown,
-				vDefFinalApproach,
-				speedFinalApproach,
-				hDefFinalApproach,
-				altRoundout,
-				hDefRoundout,
-				altLanding,
-				hDefLanding,
-				verticalSpeedFinalApp,
-				verticalSpeedStepdown,
-				verticalSpeedRoundout,
-				rollBankStepdown,
-				rollBankFinalApp,
-				rollBankRoundout,
+				stepdownData,
+				finalApproachData,
+				roundoutData,
+				landingData,
 				timeApproach,
 				timeLanding,
 				timeTotal
@@ -410,23 +357,10 @@ public class Parser {
 				beginRoundOutTimestamp,
 				beginLandingTimestamp,
 				endFlightTimestamp,
-				altStepdown,
-				dmeStepdown,
-				speedStepdown,
-				hDefStepdown,
-				vDefFinalApproach,
-				speedFinalApproach,
-				hDefFinalApproach,
-				altRoundout,
-				hDefRoundout,
-				altLanding,
-				hDefLanding,
-				verticalSpeedFinalApp,
-				verticalSpeedStepdown,
-				verticalSpeedRoundout,
-				rollBankStepdown,
-				rollBankFinalApp,
-				rollBankRoundout,
+				stepdownData,
+				finalApproachData,
+				roundoutData,
+				landingData,
 				timeApproach,
 				timeLanding,
 				timeTotal
@@ -440,16 +374,29 @@ public class Parser {
 			finalApproachOutputFilePath,
 			roundOutOutputFilePath,
 			landingOutputFilePath,
-			numStepdown + numFinalApproach + numRoundout + numLanding, 
-			numStepdown,
-			numFinalApproach,
-			numRoundout,
-			numLanding,
 			data
 		);
 		
 		return score;
 
+	}
+
+	public static FlightDataPoint listToDataPoint(String[] entry, DataIndex indexes) {
+		return new FlightDataPoint(
+			Double.parseDouble(entry[indexes.getiMTime()]),
+			Double.parseDouble(entry[indexes.getiASpeed()]),	
+			Double.parseDouble(entry[indexes.getiEng()]),
+			Double.parseDouble(entry[indexes.getiBank()]),
+			Double.parseDouble(entry[indexes.getiGroll()]),
+			Double.parseDouble(entry[indexes.getiVspeed()]),
+			Double.parseDouble(entry[indexes.getiAlt()]),
+			Double.parseDouble(entry[indexes.getiHead()]),
+			Double.parseDouble(entry[indexes.getiLatitude()]),
+			Double.parseDouble(entry[indexes.getiLongitude()]),
+			Double.parseDouble(entry[indexes.getiDme()]),
+			Double.parseDouble(entry[indexes.getiHdef()]),
+			Double.parseDouble(entry[indexes.getiVdef()])
+		);
 	}
 
 	public static LocalDateTime parseTime(String timeString) {
