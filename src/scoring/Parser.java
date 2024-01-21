@@ -411,6 +411,93 @@ public class Parser {
 		}
 		return time;
 	}
+
+	public static boolean setTimestamps(String inputFile, FlightData flightData) {
+		DataIndex indexes = new DataIndex();
+		try (
+		FileReader fileReader = new FileReader(inputFile);
+			CSVReader csvReader = new CSVReader(fileReader);
+		){
+			String endFlightTimeString = null;
+			String[] headers = csvReader.readNext();
+			for (int i = 0; i < headers.length; i++) {
+
+				switch (headers[i]) {
+					case "sys_time":
+						indexes.setiSysTime(i);
+						break;
+					case "p-alt,ftMSL":
+						indexes.setiAlt(i);
+						break;
+					case"pilN1,dme-d":
+						indexes.setiDme(i);
+						break;
+					case "pilN1,h-def":
+						indexes.setiHdef(i);
+						break;
+					case "_Vind,_kias":
+						indexes.setiASpeed(i);
+						break;
+					case "_land,groll":
+						indexes.setiGroll(i);
+						break;
+					case "hding,__mag":
+						indexes.setiHead(i);
+						break;
+				}
+			}
+
+			if (indexes.getiSysTime() == -1) {
+				return false;
+			}
+			String[] row;
+
+			while ((row = csvReader.readNext()) != null) {
+				// Before Initial Approach Fix - JIPOX
+				if (Double.valueOf(row[indexes.getiDme()]) > initialAppFixDME) {
+					if (flightData.getBeginFlightTimestamp() == null) {
+						flightData.setBeginFlightTimestamp(parseTime(row[indexes.getiSysTime()]));
+					}
+					continue;
+				
+				// ILS Stepdown portion
+				} else if(Double.valueOf(row[indexes.getiDme()]) < initialAppFixDME && Double.valueOf(row[indexes.getiDme()])>intersectionDME) {
+						if (flightData.getBeginApproachTimestamp() == null) {
+							flightData.setBeginApproachTimestamp(parseTime(row[indexes.getiSysTime()]));
+						} 
+
+				// ILS Final Approach portion
+				} else if(Double.valueOf(row[indexes.getiAlt()])>minimumsAltitude) {
+
+				// Roundout portion: From minimums, descent to the runway portion
+				} else if(!(Double.valueOf(row[indexes.getiGroll()])>0)){
+					if (flightData.getBeginRoundOutTimestamp() == null) {
+						flightData.setBeginRoundOutTimestamp(parseTime(row[indexes.getiSysTime()]));
+					}
+					
+				// Wheels touch the ground portion
+				} else {
+					if (flightData.getBeginLandingTimestamp() == null) {
+						flightData.setBeginLandingTimestamp(parseTime(row[indexes.getiSysTime()]));
+					} 
+				}
+
+				if (Double.valueOf(row[indexes.getiASpeed()]) > 0) {
+						endFlightTimeString = row[indexes.getiSysTime()];
+				}
+			}
+			if (endFlightTimeString != null) {
+				flightData.setEndFlightTimestamp(parseTime(endFlightTimeString));
+			}
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+			System.err.println(e);
+		}
+
+		return true;
+	}
 	
 	/**
 	 * @return the minimumsAltitude

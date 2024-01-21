@@ -1,13 +1,13 @@
 package scoring;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.commons.lang3.Pair;
 import utils.GazeTrimmer;
-import java.time.LocalDateTime;
 
 public class ScoreRunner {
 
@@ -75,15 +75,18 @@ public class ScoreRunner {
 
 		FlightData flightData = score.getFlightData();
 		// trim gaze files
+	
+		Parser.setTimestamps(args[2], flightData);
+
 		if (flightData.getBeginFlightTimestamp() == null) {
 			System.out.println("Did not find system timestamps...");
 			return;
-		} else if (args.length < 3){
+		} else if (args.length < 4){
 			System.out.println("No files to trim...");
 			return;
 		}
 
-		runTrim(flightData, trimOutputFolder, Arrays.copyOfRange(args, 2, args.length));
+		runTrim(flightData, trimOutputFolder, Arrays.copyOfRange(args, 3, args.length));
 	}
 		
 
@@ -109,4 +112,5 @@ public class ScoreRunner {
 			}
 		}
 	}
+
 }
