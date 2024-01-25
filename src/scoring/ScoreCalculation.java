@@ -183,14 +183,16 @@ public class ScoreCalculation {
 		double absValueVDef = Math.abs(vdef);
 		glideslopeAddedTotal += absValueVDef;
 
-		if (vspeed > -1000)	// if descending at rate greater than 1000 ft/min, unstable
+		// if descending at rate greater than 1000 ft/min, unstable
+		// if vdef == -0.0, no points
+		if (vspeed < -1000 || (vdef == 0 && 1/vdef < 0))	
 		{
+			penalty = -1;
+		}
+		else {
 			if(absValueVDef  < 2.5) {
 				penalty += absValueVDef / 2.5;
 			} 
-		}
-		else {
-			penalty += 1;
 		}
 		
 		return penalty;
@@ -259,11 +261,14 @@ public class ScoreCalculation {
 		double penalty = 0;
 
 		for (FlightDataPoint point : this.data.getStepdownData()) {
-			penalty += localizerScorePenalty(point.getHdef(), point.getBank()) 
-				+ speedILSCalcPenalty(point.getAirspeed())
-				+ altitudeILSCalcPenalty(point.getDme(), point.getAltitude(), point.getVertSpeed());
+			if (point.getHdef() == 0.0 && 1/point.getHdef() < 0) {	// equals -0.0
+				penalty += 3;
+			} else {
+				penalty += localizerScorePenalty(point.getHdef(), point.getBank()) 
+					+ speedILSCalcPenalty(point.getAirspeed())
+					+ altitudeILSCalcPenalty(point.getDme(), point.getAltitude(), point.getVertSpeed());
+			}
 		}
-
 		return penalty;
 	}
 
@@ -274,9 +279,13 @@ public class ScoreCalculation {
 	public double scoreFinalApproachCalc() {	
 		double penalty = 0;
 		for (FlightDataPoint point : this.data.getApproachData()) {
-			penalty += localizerScorePenalty(point.getHdef(), point.getBank())
-			+ speedILSCalcPenalty(point.getAirspeed())
-			+ glideSlopeScorePenalty(point.getVdef(), point.getVertSpeed());
+			if (point.getHdef() == 0.0 && 1/point.getHdef() < 0) {	// equals -0.0
+				penalty += 3;
+			} else {
+				penalty += localizerScorePenalty(point.getHdef(), point.getBank())
+				+ speedILSCalcPenalty(point.getAirspeed())
+				+ glideSlopeScorePenalty(point.getVdef(), point.getVertSpeed());
+			}
 		}
 		return penalty;
 	}
@@ -290,8 +299,12 @@ public class ScoreCalculation {
 		double penalty = 0;
 
 		for (FlightDataPoint point : this.data.getRoundoutData()) {
-			penalty += scoreVerticalSpeed(point.getVertSpeed());
-			localizerScorePenalty(point.getHdef(), point.getBank());
+			if (point.getHdef() == 0.0 && 1/point.getHdef() < 0) {	// equals -0
+				penalty += 3;
+			} else {
+				penalty += scoreVerticalSpeed(point.getVertSpeed())
+					+ localizerScorePenalty(point.getHdef(), point.getBank());
+			}
 		}
 
 		return penalty;
