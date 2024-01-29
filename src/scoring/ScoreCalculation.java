@@ -187,7 +187,7 @@ public class ScoreCalculation {
 		// if vdef == -0.0, no points
 		if (vspeed < -1000 || (vdef == 0 && 1/vdef < 0))	
 		{
-			penalty = -1;
+			penalty = 1;
 		}
 		else {
 			if(absValueVDef  < 2.5) {
