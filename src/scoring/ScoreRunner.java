@@ -18,8 +18,10 @@ public class ScoreRunner {
 
 	/**
 	 * entry point of scoring calculation program
-	 * @param args[1] output directory path
+	 * @param args[0] output directory path
 	 * @param args[1] xplane data file path
+	 * @param args[2] csv file with timestamps and dme
+	 * @param args[3..n] gaze files to trim
 	 */
 	public static void main(String[] args) {
 
@@ -75,6 +77,10 @@ public class ScoreRunner {
 
 		FlightData flightData = score.getFlightData();
 		// trim gaze files
+
+		if (args.length < 3) {
+			return;
+		} 
 	
 		Parser.setTimestamps(args[2], flightData);
 

@@ -155,7 +155,7 @@ public class Parser {
 		ScoreCalculation score;
 		String basePathName = outputFolderPath + "//" + name + "_flight_data";
 		String stepdownOutputFilePath = basePathName + "_stepdown.csv";
-		String finalApproachOutputFilePath = basePathName + "_approach.csv";
+		String finalApproachOutputFilePath = basePathName + "_finalapproach.csv";
 		String roundOutOutputFilePath = basePathName + "_roundout.csv";
 		String landingOutputFilePath = basePathName+ "_landing.csv";
 
