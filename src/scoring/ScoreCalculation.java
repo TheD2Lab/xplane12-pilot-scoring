@@ -40,17 +40,27 @@ public class ScoreCalculation {
 	private String landingFile;
 	
 	// Additional X-Plane measures
-	private double avgILSSpeed = 0; // Includes stepdown and final approach portion
+
+	// Includes stepdown and final approach portion
+	private double minILSSpeed = Double.POSITIVE_INFINITY;
+	private double maxILSSpeed = 0;
+	private double avgILSSpeed = 0;
 	private double speedAddedTotal = 0;
-	private double avgILSVspeed = 0; // Includes stepdown and final approach portion
+	private double countProperILSSpeed = 0; // Number of data points speed +/-10 TARGET_SPEED
+	private double percentProperSpeed = 0;
+	private double avgILSVspeed = 0;
+	private double minILSVspeed = Double.POSITIVE_INFINITY;
+	private double maxILSVspeed = 0;
 	private double vspeedAddedTotal = 0;
-	private double avgILSHdef = 0; // Includes stepdown and final approach portion
+	private double avgILSHdef = 0;
 	private double hdefAddedTotal = 0;
-	private double avgFinAppVdef = 0; // Includes final approach portion
-	private double vdefAddedTotal = 0;
-	private double avgILSBankAngle = 0; // Includes stepdown and final approach portion
+	private double avgILSBankAngle = 0;
 	private double bankAngleAddedTotal = 0;
-	private double maxILSBankAngle = 0; // Includes stepdown and final approach portion
+	private double maxILSBankAngle = 0; 
+
+	// Includes final approach portion
+	private double avgFinAppVdef = 0;
+	private double vdefAddedTotal = 0;
 
 	private final static List<Fix> STEPDOWN_FIXES;
 	static {
@@ -238,9 +248,10 @@ public class ScoreCalculation {
 		double penalty = 0;
 		double difference = Math.abs(speed - TARGET_SPEED);
 
-		if (difference < 10)
+		if (difference <= 10)
 		{
 			penalty += (difference / 10);
+			this.countProperILSSpeed++;
 		}
 		else {
 			penalty += 1;
@@ -257,6 +268,19 @@ public class ScoreCalculation {
 			this.hdefAddedTotal += Math.abs(point.getHdef());
 			this.speedAddedTotal += point.getAirspeed();
 			this.vspeedAddedTotal += point.getVertSpeed();
+
+			if (point.getAirspeed() < this.minILSSpeed) {
+				this.minILSSpeed = point.getAirspeed();
+			} else if (point.getAirspeed() > this.maxILSSpeed) {
+				this.maxILSSpeed = point.getAirspeed();
+			}
+
+			if (point.getVertSpeed() < this.minILSVspeed) {
+				this.minILSVspeed = point.getVertSpeed();
+			} else if (point.getVertSpeed() < this.maxILSVspeed) {
+				this.maxILSVspeed = point.getVertSpeed();
+			}
+
 			if (point.getHdef() == 0.0 && 1/point.getHdef() < 0) {	// equals -0.0
 				penalty += 3;
 			} else {
@@ -368,6 +392,8 @@ public class ScoreCalculation {
 		this.avgILSVspeed = this.vspeedAddedTotal / numApproachData;
 		// average localizer (horizontal) deflections in all stages
 		this.avgILSHdef = this.hdefAddedTotal / numApproachData;
+		// percentage of data points with speed within +/- 10 target speed
+		this.percentProperSpeed = this.countProperILSSpeed / numApproachData;
 	}
 	
 	// Below are housekeeping items
@@ -381,8 +407,13 @@ public class ScoreCalculation {
 			"Approach Time",
 			"Landing Score",
 			"Landing Time",
-			"AVG ILS Speed",
-			"AVG Final Approach VSI",
+			"MIN ILS Airspeed",
+			"MAX ILS Airspeed",
+			"AVG ILS Airspeed",
+			"% Proper Airspeed",
+			"MIN ILS VSI",
+			"MAX ILS VSI",
+			"AVG ISL VSI",
 			"AVG ILS ABS Glideslope Deflection",
 			"AVG ILS ABS Localizer Deflection",
 			"AVG ILS ABS Roll Bank Angle",
@@ -396,12 +427,17 @@ public class ScoreCalculation {
 			String.valueOf(this.data.getTimeApproach()),
 			String.valueOf(getPercentageScore(scoreType.LANDING)),
 			String.valueOf(this.data.getTimeLanding()),
-			String.valueOf(avgILSSpeed),
-			String.valueOf(avgILSVspeed),
-			String.valueOf(avgFinAppVdef),
-			String.valueOf(avgILSHdef),
-			String.valueOf(avgILSBankAngle),
-			String.valueOf(maxILSBankAngle)
+			String.valueOf(this.minILSSpeed),
+			String.valueOf(this.maxILSSpeed),
+			String.valueOf(this.avgILSSpeed),
+			String.valueOf(this.percentProperSpeed),
+			String.valueOf(this.minILSVspeed),
+			String.valueOf(this.maxILSVspeed),
+			String.valueOf(this.avgILSVspeed),
+			String.valueOf(this.avgFinAppVdef),
+			String.valueOf(this.avgILSHdef),
+			String.valueOf(this.avgILSBankAngle),
+			String.valueOf(this.maxILSBankAngle)
 		};
 
 		try (
