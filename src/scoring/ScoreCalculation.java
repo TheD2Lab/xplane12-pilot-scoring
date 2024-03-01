@@ -410,7 +410,7 @@ public class ScoreCalculation {
 			"MIN_ILS_Airspeed",
 			"MAX_ILS_Airspeed",
 			"AVG_ILS_Airspeed",
-			"%_Proper_Airspeed",
+			"Percentage_Proper_Airspeed",
 			"MIN_ILS_VSI",
 			"MAX_ILS_VSI",
 			"AVG_ILS_VSI",
