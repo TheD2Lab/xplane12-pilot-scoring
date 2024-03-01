@@ -218,7 +218,7 @@ public class ScoreCalculation {
 			currentFix++;
 		}
 		
-		if (vspeed < 1000)
+		if (vspeed > -1000)	// FAA recommends decent rate less than 1000fpm (so greater than -1000)
 		{
 			if (altitude > STEPDOWN_FIXES.get(currentFix).altitude)
 			{
@@ -277,7 +277,7 @@ public class ScoreCalculation {
 
 			if (point.getVertSpeed() < this.minILSVspeed) {
 				this.minILSVspeed = point.getVertSpeed();
-			} else if (point.getVertSpeed() < this.maxILSVspeed) {
+			} else if (point.getVertSpeed() > this.maxILSVspeed) {
 				this.maxILSVspeed = point.getVertSpeed();
 			}
 
@@ -305,6 +305,19 @@ public class ScoreCalculation {
 			this.speedAddedTotal += point.getAirspeed();
 			this.vspeedAddedTotal += point.getVertSpeed();
 			this.vdefAddedTotal += Math.abs(point.getVdef());
+
+			if (point.getAirspeed() < this.minILSSpeed) {
+				this.minILSSpeed = point.getAirspeed();
+			} else if (point.getAirspeed() > this.maxILSSpeed) {
+				this.maxILSSpeed = point.getAirspeed();
+			}
+
+			if (point.getVertSpeed() < this.minILSVspeed) {
+				this.minILSVspeed = point.getVertSpeed();
+			} else if (point.getVertSpeed() > this.maxILSVspeed) {
+				this.maxILSVspeed = point.getVertSpeed();
+			}
+
 			if (point.getHdef() == 0.0 && 1/point.getHdef() < 0) {	// equals -0.0
 				penalty += 3;
 			} else {
@@ -410,7 +423,7 @@ public class ScoreCalculation {
 			"MIN_ILS_Airspeed",
 			"MAX_ILS_Airspeed",
 			"AVG_ILS_Airspeed",
-			"Percentage_Proper_Airspeed",
+			"Percent_Proper_Airspeed",
 			"MIN_ILS_VSI",
 			"MAX_ILS_VSI",
 			"AVG_ILS_VSI",
