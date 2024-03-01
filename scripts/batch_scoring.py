@@ -176,22 +176,22 @@ def single_analysis(score_file: str, m_dict: dict, num_index: int, id_index: int
    is_score_file = False
    for i, header in enumerate(headers):
       temp = float(values[i])
-      if header == "Overall Score":
+      if header == "Overall_Score":
          update_analysis(m_dict, temp, pid, "avg_oscore", "high_oscore", "low_oscore", num_index, id_index)
          is_score_file = True       # file contains scores
-      elif header == "Total Time":
+      elif header == "Total_Time":
          update_analysis(m_dict, temp, pid, "avg_otime", "high_otime", "low_otime", num_index, id_index)
       
-      elif header == "Approach Score":
+      elif header == "Approach_Score":
          update_analysis(m_dict, temp, pid, "avg_ascore", "high_ascore", "low_ascore", num_index, id_index)
 
-      elif header == "Approach Time":
+      elif header == "Approach_Time":
          update_analysis(m_dict, temp, pid, "avg_atime", "high_atime", "low_atime", num_index, id_index)
       
-      elif header == "Landing Score":
+      elif header == "Landing_Score":
          update_analysis(m_dict, temp, pid, "avg_lscore", "high_lscore", "low_lscore", num_index, id_index)
 
-      elif header == "Landing Time":
+      elif header == "Landing_Time":
          update_analysis(m_dict, temp, pid, "avg_ltime", "high_ltime", "low_ltime", num_index, id_index)
 
    if is_score_file:
