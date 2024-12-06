@@ -36,8 +36,12 @@ def compile_source():
    print("Compiling...")
    jar_files: list[str] = ["-cp", "./libs/common-lang3.jar:./libs/opencsv-5.7.0.jar:./libs/weka.jar"]
    src_files: list[str] = glob("src/**/*.java")
+   print(f"Found Java source files: {src_files}")  # Debug print
    command = ["javac"] + jar_files + src_files
-   subprocess.run(command)
+   print(f"Running command: {' '.join(command)}")  # Debug print
+   result = subprocess.run(command, capture_output=True, text=True)
+   print(f"Compilation stdout: {result.stdout}")  # Debug print
+   print(f"Compilation stderr: {result.stderr}")  # Debug print
 
 
 def run_single(output_dir: str, pilot_dir: str):
@@ -49,38 +53,178 @@ def run_single(output_dir: str, pilot_dir: str):
       "scoring/ScoreRunner"
    ]
    data_files: list[str] = []
-   txt_file = glob(f"{pilot_dir}/*xplane.txt")  # check for xplane.txt file
+   txt_file = glob(f"{pilot_dir}/*_xplane.txt")
+   
+   if txt_file:
+      data_files = txt_file
+      data_files += glob(f"{pilot_dir}/*.csv")
+      
+      # First run the Java program to get the parsed data files
+      java_program += [output_dir] + data_files
+      result = subprocess.run(java_program, capture_output=True, text=True)
+      
+      # Now process the detailed data files
+      pid = os.path.basename(pilot_dir)
+      detailed_output = os.path.join(output_dir, f"{pid}_detailed_scores.csv")
+      
+      # Process each phase's data file and calculate scores
+      phases = ['stepdown', 'finalapproach', 'roundout', 'landing']
+      all_scores = []
+      
+      for phase in phases:
+         phase_file = os.path.join(output_dir, pid, f"{pid}_flight_data_{phase}.csv")
+         if os.path.exists(phase_file):
+               scores = process_phase_data(phase_file, phase)
+               all_scores.extend(scores)
+      
+      # Write all scores to a single CSV
+      if all_scores:
+         write_detailed_scores(detailed_output, all_scores)
 
-   if txt_file:   # xplane.txt file found, so txt_files is not empty
-      data_files += txt_file
-   else:          # no flight data found
-      print(f"No xplane.txt found in {pilot_dir}")
+def process_phase_data(file_path: str, phase: str) -> list[dict]:
+   scores = []
+   
+   with open(file_path, 'r') as f:
+      csvreader = csv.DictReader(f)
+      for row in csvreader:
+         score_components = calculate_row_scores(row, phase)
+         scores.append({
+               'Phase': phase,
+               'Time': row.get('missn,_time', ''),
+               'Airspeed_Score': score_components['airspeed'],
+               'Localizer_Score': score_components['localizer'],
+               'Glideslope_Score': score_components['glideslope'],
+               'Bank_Score': score_components['bank'],
+               'VSI_Score': score_components['vsi'],
+               'Total_Row_Score': calculate_total_score(score_components),
+               **row  # Include original data
+         })
+   return scores
+
+def calculate_row_scores(row: dict, phase: str) -> dict:
+   scores = {}
+   
+   # Airspeed scoring (target 90 knots)
+   try:
+      airspeed = float(row.get('_Vind,_kias', 0))
+      speed_diff = abs(airspeed - 90)
+      scores['airspeed'] = max(0, 1 - (speed_diff / 10))
+   except ValueError:
+      scores['airspeed'] = 0
+      
+   # Localizer scoring
+   try:
+      hdef = float(row.get('pilN1,h-def', 0))
+      scores['localizer'] = max(0, 1 - (abs(hdef) / 2.5))
+   except ValueError:
+      scores['localizer'] = 0
+      
+   # Glideslope scoring (if in approach phase)
+   try:
+      vdef = float(row.get('pilN1,v-def', 0))
+      scores['glideslope'] = max(0, 1 - (abs(vdef) / 2.5)) if phase in ['finalapproach', 'stepdown'] else 1.0
+   except ValueError:
+      scores['glideslope'] = 0
+      
+   # Bank angle scoring
+   try:
+      bank = float(row.get('_roll,__deg', 0))
+      scores['bank'] = max(0, 1 - (abs(bank) / 15))
+   except ValueError:
+      scores['bank'] = 0
+      
+   # Vertical speed scoring
+   try:
+      vsi = float(row.get('__VVI,__fpm', 0))
+      scores['vsi'] = 1.0 if vsi > -1000 else 0.0
+   except ValueError:
+      scores['vsi'] = 0
+      
+   return scores
+
+def calculate_total_score(components: dict) -> float:
+   weights = {
+      'airspeed': 0.3,
+      'localizer': 0.3,
+      'glideslope': 0.2,
+      'bank': 0.1,
+      'vsi': 0.1
+   }
+   return sum(components[k] * weights[k] for k in components)
+
+def write_detailed_scores(output_file: str, scores: list[dict]):
+   if not scores:
       return
-   data_files += glob(f"{pilot_dir}/*.csv")
+      
+   with open(output_file, 'w', newline='') as f:
+      writer = csv.DictWriter(f, fieldnames=scores[0].keys())
+      writer.writeheader()
+      writer.writerows(scores)
 
-   datarefs_index = -1
-   for i, file in enumerate(data_files):
-      if re.search(regex, file):
-         datarefs_index = i
-         break
+def single_analysis(score_file: str, m_dict: dict, num_index: int, id_index: int) -> list[str]:
+   global count  # Move global declaration to the start of the function
+   rows = []
+   pid = os.path.basename(os.path.dirname(score_file))
+   
+   # Create a CSV file for this participant's row scores
+   detailed_score_file = os.path.join(os.path.dirname(score_file), f"{pid}_detailed_scores.csv")
+   
+   with open(score_file, 'r') as read_file:
+      csvreader = csv.reader(read_file)
+      global headers
+      if headers is None:
+         headers = next(csvreader)
+      else:
+         next(csvreader)
+         
+      values = next(csvreader)
+      is_score_file = False
 
-   if datarefs_index != -1:
-      # put datarefs file second in list
-      data_files[1], data_files[datarefs_index] = data_files[datarefs_index], data_files[1]
-   java_program += [output_dir] + data_files
-   subprocess.run(java_program)
+      for i, header in enumerate(headers):
+         temp = float(values[i])
+         if header == "Overall_Score":
+               update_analysis(m_dict, temp, pid, "avg_oscore", "high_oscore", "low_oscore", num_index, id_index)
+               is_score_file = True
+         elif header == "Total_Time":
+               update_analysis(m_dict, temp, pid, "avg_otime", "high_otime", "low_otime", num_index, id_index)
+         elif header == "Approach_Score":
+               update_analysis(m_dict, temp, pid, "avg_ascore", "high_ascore", "low_ascore", num_index, id_index)
+         elif header == "Approach_Time":
+               update_analysis(m_dict, temp, pid, "avg_atime", "high_atime", "low_atime", num_index, id_index)
+         elif header == "Landing_Score":
+               update_analysis(m_dict, temp, pid, "avg_lscore", "high_lscore", "low_lscore", num_index, id_index)
+         elif header == "Landing_Time":
+               update_analysis(m_dict, temp, pid, "avg_ltime", "high_ltime", "low_ltime", num_index, id_index)
+
+      if is_score_file:
+         count += 1
+         return [pid] + values
+         
+   return None
+
+
 
 def run_multiple(output_dir: str, data_dir: str):
-   pilot_dirs = glob(data_dir + "*" + os.path.sep) # get the child directories
+   # Get the child directories (p1, p2, etc.)
+   pilot_dirs = glob(os.path.join(data_dir, "p*"))  # Changed to match p1, p2, etc. pattern
+   print(f"Found pilot directories: {pilot_dirs}")  # Debug print
+   
    for p_dir in pilot_dirs:
-      if "Questionnaires" in p_dir:
+      if "Questionnaires" in p_dir:  # Keep this check
          continue
+      print(f"Processing pilot directory: {p_dir}")  # Debug print
       run_single(output_dir, p_dir)
-   print()
-
 
 def summary_analysis(dir: str):
-   pilot_dirs = glob(dir + "*" + os.path.sep) # get the child directories
+   print(f"Starting summary analysis in directory: {dir}")
+   # Fix the directory pattern to use os.path.join
+   pilot_dirs = glob(os.path.join(dir, "p*"))
+   print(f"Found pilot directories for analysis: {pilot_dirs}")
+   
+   global headers  # Make sure we can modify the global headers variable
+   if headers is None:
+      headers = ["Overall_Score", "Total_Time", "Approach_Score", "Approach_Time", "Landing_Score", "Landing_Time"]
+
    labels = ["Measure", "Value", "PID"]
    measures = [
       "avg_oscore",
@@ -131,8 +275,11 @@ def summary_analysis(dir: str):
 
    pilot_scores = []
    for p_dir in pilot_dirs:
-      score_file = glob(f"{p_dir}/*score.csv")
+      # Update the score file pattern to match the actual files
+      score_file = glob(os.path.join(p_dir, "*_score.csv"))
+      print(f"Looking for score file in {p_dir}: {score_file}")  # Debug print
       if not score_file:   # glob returned an empty array
+         print(f"No score file found in {p_dir}")  # Debug print
          continue
       row = single_analysis(score_file[0], m_dict, num_index, id_index)
       if row:              # row is not empty or None

@@ -108,6 +108,121 @@ public class ScoreCalculation {
 	/**
 	 * Calculates the max points for the overall score and sub-scores.
 	 */
+	public void writeDetailedScores(String outputLocation) {
+        String detailedOutputFile = outputLocation + "/" + this.participant + "_detailed_scores.csv";
+        List<String[]> allScores = new ArrayList<>();
+        
+        // Headers for the detailed score file
+        String[] headers = {
+            "Phase",
+            "Time",
+            "Altitude",
+            "DME",
+            "Airspeed",
+            "Vertical_Speed",
+            "Bank_Angle",
+            "Heading",
+            "Localizer_Deflection",
+            "Glideslope_Deflection",
+            "Airspeed_Score",
+            "Localizer_Score",
+            "Glideslope_Score",
+            "Bank_Score",
+            "VSI_Score",
+            "Row_Total_Score"
+        };
+
+        try (
+            FileWriter fileWriter = new FileWriter(new File(detailedOutputFile));
+            CSVWriter csvWriter = new CSVWriter(fileWriter)
+        ) {
+            csvWriter.writeNext(headers);
+
+            // Process Stepdown phase
+            for (FlightDataPoint point : this.data.getStepdownData()) {
+                String[] row = calculateDetailedScoreRow("Stepdown", point);
+                csvWriter.writeNext(row);
+            }
+
+            // Process Final Approach phase
+            for (FlightDataPoint point : this.data.getApproachData()) {
+                String[] row = calculateDetailedScoreRow("Final_Approach", point);
+                csvWriter.writeNext(row);
+            }
+
+            // Process Roundout phase
+            for (FlightDataPoint point : this.data.getRoundoutData()) {
+                String[] row = calculateDetailedScoreRow("Roundout", point);
+                csvWriter.writeNext(row);
+            }
+
+            // Process Landing phase
+            for (FlightDataPoint point : this.data.getLandingData()) {
+                String[] row = calculateDetailedScoreRow("Landing", point);
+                csvWriter.writeNext(row);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Error writing detailed scores file: " + e.getMessage());
+        }
+    }
+	private String[] calculateDetailedScoreRow(String phase, FlightDataPoint point) {
+        // Calculate individual component scores
+        double airspeedScore = 1.0;
+        double localizerScore = 1.0;
+        double glideslopeScore = 1.0;
+        double bankScore = 1.0;
+        double vsiScore = 1.0;
+        
+        // Calculate airspeed score
+        double speedPenalty = speedILSCalcPenalty(point.getAirspeed());
+        airspeedScore = 1.0 - speedPenalty;
+
+        // Calculate localizer score
+        double locPenalty = localizerScorePenalty(point.getHdef(), point.getBank(), point.getHeading());
+        localizerScore = 1.0 - locPenalty;
+
+        // Calculate glideslope score for relevant phases
+        if (phase.equals("Stepdown") || phase.equals("Final_Approach")) {
+            double gsPenalty = glideSlopeScorePenalty(point.getVdef(), point.getVertSpeed());
+            glideslopeScore = 1.0 - gsPenalty;
+        }
+
+        // Calculate bank angle score
+        double bankPenalty = Math.abs(point.getBank()) > 15 ? 1.0 : Math.abs(point.getBank()) / 15.0;
+        bankScore = 1.0 - bankPenalty;
+
+        // Calculate vertical speed score
+        vsiScore = point.getVertSpeed() < -1000 ? 0.0 : 1.0;
+
+        // Calculate total row score using weights
+        double rowTotalScore = (
+            airspeedScore * 0.3 +
+            localizerScore * 0.3 +
+            glideslopeScore * 0.2 +
+            bankScore * 0.1 +
+            vsiScore * 0.1
+        );
+
+        return new String[] {
+            phase,
+            String.valueOf(point.getMissn_time()),
+            String.valueOf(point.getAltitude()),
+            String.valueOf(point.getDme()),
+            String.valueOf(point.getAirspeed()),
+            String.valueOf(point.getVertSpeed()),
+            String.valueOf(point.getBank()),
+            String.valueOf(point.getHeading()),
+            String.valueOf(point.getHdef()),
+            String.valueOf(point.getVdef()),
+            String.format("%.4f", airspeedScore),
+            String.format("%.4f", localizerScore),
+            String.format("%.4f", glideslopeScore),
+            String.format("%.4f", bankScore),
+            String.format("%.4f", vsiScore),
+            String.format("%.4f", rowTotalScore)
+        };
+    }
 	private void setMaxPoints() {
 
 		double possible_points;
@@ -463,6 +578,7 @@ public class ScoreCalculation {
 			outputCSVWriter.writeNext(new String []{});
 			outputCSVWriter.writeNext(new String []{});
 			outputCSVWriter.writeNext(new String []{});
+			
 		}
 		catch (FileNotFoundException e) {
 			System.out.println("Unable to open file '" + outputFile + "'");
@@ -470,6 +586,7 @@ public class ScoreCalculation {
 		catch(IOException e) {
 			System.out.println("Error writing to file '" + outputFile + "'");
 		}
+		writeDetailedScores(outputLocation);
 	}
 
 	public double getPercentageScore(scoreType val) {

@@ -19,7 +19,7 @@ public class ScoreRunner {
 	/**
 	 * entry point of scoring calculation program
 	 * @param args[0] output directory path
-	 * @param args[1] xplane data file path
+	 * @param args[1] xplane data file patha
 	 * @param args[2] csv file with timestamps and dme
 	 * @param args[3..n] gaze files to trim
 	 */
