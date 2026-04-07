@@ -159,10 +159,10 @@ public class ScoreCalculationUpdated {
 		roundoutScore[1]      = Math.max(1, nRO * MAX_PTS_PER_DATA_POINT_ROUNDOUT);
 		landingPhaseScore[1]  = Math.max(1, nLD * MAX_PTS_PER_DATA_POINT_LANDING);
 
-		stepdownScore[0]      = stepdownScore[1];
-		finalApproachScore[0] = finalApproachScore[1];
-		roundoutScore[0]      = roundoutScore[1];
-		landingPhaseScore[0]  = landingPhaseScore[1];
+		stepdownScore[0]      = nSD > 0 ? stepdownScore[1] : 0;
+		finalApproachScore[0] = nFA > 0 ? finalApproachScore[1] : 0;
+		roundoutScore[0]      = nRO > 0 ? roundoutScore[1] : 0;
+		landingPhaseScore[0]  = nLD > 0 ? landingPhaseScore[1] : 0;
 
 		// Existing aggregate approach/landing scores
 		double possible_points =
