@@ -23,6 +23,14 @@ public class ScoreCalculation {
 	private final static int TARGET_SPEED = 90;
 	private final static int TARGET_HEADING = 344;
 
+	// Full-scale deflection of the ILS localizer/glideslope needle, in dots.
+	// X-Plane's pilN1 h-def/v-def saturate at +/-2.5; FAA-H-8083-15B describes the
+	// standard five-dot CDI face, i.e. 2.5 dots either side of on-course.
+	private final static double FULL_SCALE_DOTS = 2.5;
+	// FAA-S-ACS-8C IR.VI.B.S12: a stabilized final approach from the FAF to DA/DH allows
+	// no more than 3/4-scale deflection of either the vertical or lateral guidance.
+	private final static double MAX_DEFLECTION = 0.75 * FULL_SCALE_DOTS;	// = 1.875 dots
+
 	private String participant;
 
 	// [0] = actual score, [1] = highest possible score
@@ -152,8 +160,18 @@ public class ScoreCalculation {
 			this.maxILSBankAngle = absBankAngle;
 		}
 		
-		if (absBankAngle < 15 && absHdef < 2.5 && headingDiff <= 25) {
-			penalty = absHdef / 2.5;	
+		// OLD: scored against 2.5 dots, i.e. FULL-scale deflection. A needle pegged just
+		// inside the stop still earned partial credit.
+		// if (absBankAngle < 15 && absHdef < 2.5 && headingDiff <= 25) {
+		// 	penalty = absHdef / 2.5;
+		// } else {
+		// 	penalty = 1;
+		// }
+
+		// NEW: scores against 3/4 * 2.5 = 1.875 dots, the 3/4-scale deflection allowed by
+		// FAA-S-ACS-8C IR.VI.B.S12.
+		if (absBankAngle < 15 && absHdef < MAX_DEFLECTION && headingDiff <= 25) {
+			penalty = absHdef / MAX_DEFLECTION;
 		} else {
 			penalty = 1;
 		}
@@ -170,8 +188,16 @@ public class ScoreCalculation {
 		double penalty = 0;
 		double absHdef = Math.abs(hdef);	
 
-		if(absHdef  < 2.5) {
-			penalty = absHdef / 2.5;
+		// OLD: scored against 2.5 dots, i.e. FULL-scale deflection.
+		// if(absHdef  < 2.5) {
+		// 	penalty = absHdef / 2.5;
+		// } else {
+		// 	penalty = 1;
+		// }
+
+		// NEW: scores against 3/4 * 2.5 = 1.875 dots (FAA-S-ACS-8C IR.V.A.S6).
+		if(absHdef < MAX_DEFLECTION) {
+			penalty = absHdef / MAX_DEFLECTION;
 		} else {
 			penalty = 1;
 		}
@@ -194,10 +220,22 @@ public class ScoreCalculation {
 		{
 			penalty = 1;
 		}
+		// OLD: scored against 2.5 dots, i.e. FULL-scale deflection, and had NO else branch.
+		// A deflection at or beyond 2.5 left penalty at 0, which awarded FULL credit for a
+		// pegged needle instead of none.
+		// else {
+		// 	if(absVdef  < 2.5) {
+		// 		penalty += absVdef / 2.5;
+		// 	}
+		// }
+
+		// NEW: scores against 3/4 * 2.5 = 1.875 dots (FAA-S-ACS-8C IR.VI.B.S12), and the
+		// added else gives no credit once the needle is at or beyond that deflection.
+		else if (absVdef < MAX_DEFLECTION) {
+			penalty += absVdef / MAX_DEFLECTION;
+		}
 		else {
-			if(absVdef  < 2.5) {
-				penalty += absVdef / 2.5;
-			} 
+			penalty = 1;
 		}
 		
 		return penalty;
